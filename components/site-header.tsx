@@ -8,41 +8,39 @@ export function SiteHeader({ variant = "product" }: SiteHeaderProps) {
   const isHotel = variant === "hotel";
 
   return (
-    <header className="mx-auto flex w-full max-w-7xl items-center justify-between px-5 py-5 sm:px-8">
-      <Link href="/" className="flex items-center gap-3" aria-label="BookMe home">
-        <span className="grid h-9 w-9 place-items-center rounded-lg bg-ink text-sm font-semibold text-cream">
-          B
-        </span>
-        <span>
-          <span className="block text-sm font-semibold tracking-wide text-ink">
-            {isHotel ? "Sriram Hotel" : "BookMe"}
-          </span>
-          <span className="block text-xs text-sage">
-            {isHotel ? "Powered by BookMe" : "AI front desk"}
-          </span>
-        </span>
+    <header className="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between px-8 py-6">
+      <Link
+        href="/"
+        className="display-font text-3xl tracking-tight text-white"
+        aria-label="BookMe home"
+      >
+        {isHotel ? "Sriram Hotel" : "BookMe"}
+        <sup className="text-xs">®</sup>
       </Link>
 
-      <nav className="hidden items-center gap-7 text-sm text-sage md:flex">
-        <Link href="/#product" className="transition hover:text-ink">
-          Product
+      <nav className="hidden items-center gap-7 text-sm text-white/60 md:flex">
+        <Link href="/" className="text-white transition-colors hover:text-white">
+          Home
         </Link>
-        <Link href="/#workflow" className="transition hover:text-ink">
-          Workflow
+        <Link href="/#product" className="transition-colors hover:text-white">
+          Studio
         </Link>
-        <Link href="/demo" className="transition hover:text-ink">
-          Demo hotel
+        <Link href="/#workflow" className="transition-colors hover:text-white">
+          About
         </Link>
-        <Link href="/#proof" className="transition hover:text-ink">
-          Proof
+        <Link href="/#proof" className="transition-colors hover:text-white">
+          Journal
+        </Link>
+        <Link href="/demo" className="transition-colors hover:text-white">
+          Reach Us
         </Link>
       </nav>
 
       <Link
         href="/demo"
-        className="rounded-full bg-moss px-4 py-2 text-sm font-semibold text-white shadow-card transition hover:-translate-y-0.5 hover:bg-ink"
+        className="liquid-glass rounded-full px-6 py-2.5 text-sm font-medium text-white transition duration-300 hover:scale-[1.03]"
       >
-        Try demo
+        Begin Journey
       </Link>
     </header>
   );
