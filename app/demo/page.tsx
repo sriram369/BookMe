@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, CalendarDays, MapPin, Send, Star } from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarDays, MapPin } from "lucide-react";
 import { DotLoader } from "@/components/dot-loader";
+import { FrontDeskChat } from "@/components/front-desk-chat";
 import { SiteHeader } from "@/components/site-header";
-import { adminRows, demoMessages, reservationSummary } from "@/lib/demo-data";
+import { adminRows } from "@/lib/demo-data";
 
 export default function DemoPage() {
   return (
@@ -60,78 +61,7 @@ export default function DemoPage() {
             </div>
           </section>
 
-          <section id="front-desk" className="liquid-glass rounded-[2rem] p-3 shadow-soft">
-            <div className="overflow-hidden rounded-[1.55rem] border border-white/10 bg-black/20">
-              <div className="flex items-center justify-between border-b border-white/10 bg-white/[0.03] px-4 py-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/[0.45]">
-                    AI front desk
-                  </p>
-                  <p className="text-sm font-medium text-white">Ask naturally</p>
-                </div>
-                <div className="liquid-glass flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium text-white">
-                  <Star className="h-3.5 w-3.5 fill-white" />
-                  Demo
-                </div>
-              </div>
-
-              <div className="space-y-4 p-4 sm:p-5">
-                {demoMessages.map((message) => (
-                  <div
-                    key={message.text}
-                    className={
-                      message.role === "guest"
-                        ? "ml-auto max-w-[84%] rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-zinc-950"
-                        : "max-w-[84%] rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm leading-6 text-white shadow-card"
-                    }
-                  >
-                    {message.text}
-                  </div>
-                ))}
-
-                <div className="liquid-glass transition-pop rounded-2xl p-4 shadow-card">
-                  <div className="mb-4 flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/[0.45]">
-                        Reservation confirmed
-                      </p>
-                      <h3 className="mt-1 text-2xl font-medium text-white">{reservationSummary.id}</h3>
-                    </div>
-                    <span className="liquid-glass rounded-full px-3 py-1 text-xs font-medium text-white">
-                      {reservationSummary.status}
-                    </span>
-                  </div>
-                  <dl className="grid gap-3 text-sm sm:grid-cols-2">
-                    <div className="rounded-xl bg-white/[0.06] px-3 py-2">
-                      <dt className="text-white/50">Guest</dt>
-                      <dd className="font-medium text-white">{reservationSummary.guest}</dd>
-                    </div>
-                    <div className="rounded-xl bg-white/[0.06] px-3 py-2">
-                      <dt className="text-white/50">Room</dt>
-                      <dd className="font-medium text-white">{reservationSummary.room}</dd>
-                    </div>
-                    <div className="rounded-xl bg-white/[0.06] px-3 py-2">
-                      <dt className="text-white/50">Dates</dt>
-                      <dd className="font-medium text-white">{reservationSummary.dates}</dd>
-                    </div>
-                    <div className="rounded-xl bg-white/[0.06] px-3 py-2">
-                      <dt className="text-white/50">Total</dt>
-                      <dd className="font-medium text-white">{reservationSummary.price}</dd>
-                    </div>
-                  </dl>
-                </div>
-
-                <div className="liquid-glass flex items-center gap-3 rounded-2xl p-2">
-                  <div className="flex min-h-11 flex-1 items-center px-3 text-sm text-white/[0.55]">
-                    Try: &quot;I want to check in with my phone number&quot;
-                  </div>
-                  <button className="liquid-glass grid h-11 w-11 place-items-center rounded-xl text-white transition hover:scale-[1.03]">
-                    <Send className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </section>
+          <FrontDeskChat />
         </div>
       </section>
 
