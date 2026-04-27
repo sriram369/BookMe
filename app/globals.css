@@ -59,16 +59,87 @@ textarea {
   position: relative;
   min-height: 100svh;
   overflow: hidden;
-  background: hsl(var(--background));
+  background: #020401;
 }
 
-.hero-video {
+.hero-image-bg {
   position: absolute;
   inset: 0;
   z-index: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 72% 82%, rgba(244, 255, 0, 0.98) 0%, rgba(227, 255, 0, 0.88) 22%, transparent 43%),
+    radial-gradient(ellipse at 58% 47%, rgba(221, 255, 0, 0.95) 0%, rgba(120, 181, 18, 0.86) 25%, rgba(0, 0, 0, 0.45) 51%, transparent 72%),
+    radial-gradient(ellipse at 96% 8%, rgba(233, 255, 0, 0.93) 0%, rgba(118, 170, 20, 0.72) 24%, transparent 50%),
+    radial-gradient(ellipse at 12% 84%, rgba(235, 255, 0, 0.9) 0%, rgba(70, 117, 13, 0.68) 28%, transparent 58%),
+    linear-gradient(125deg, #010200 0%, #061006 34%, #294c0e 55%, #e9ff00 100%);
+}
+
+.hero-image-bg::before {
+  content: "";
+  position: absolute;
+  inset: -18%;
+  background:
+    linear-gradient(154deg, transparent 0 18%, rgba(235, 255, 0, 0.98) 22%, rgba(15, 41, 5, 0.88) 31%, rgba(0, 0, 0, 0.94) 38%, rgba(196, 255, 0, 0.9) 42%, transparent 58%),
+    linear-gradient(24deg, transparent 0 42%, rgba(0, 0, 0, 0.98) 47%, rgba(164, 235, 0, 0.72) 50%, rgba(255, 255, 255, 0.72) 51%, transparent 56%),
+    linear-gradient(9deg, transparent 0 37%, rgba(4, 8, 1, 0.97) 43%, rgba(211, 255, 0, 0.65) 47%, transparent 61%);
+  filter: blur(2px) contrast(1.32) saturate(1.25);
+  transform: rotate(-9deg) scale(1.08);
+}
+
+.hero-image-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 52% 48%, rgba(255, 255, 255, 0.22), transparent 21%),
+    radial-gradient(ellipse at 82% 87%, rgba(255, 255, 255, 0.42), transparent 7%),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.62), transparent 32%, rgba(0, 0, 0, 0.12) 62%, transparent);
+  mix-blend-mode: screen;
+  opacity: 0.78;
+}
+
+.hero-image-glass {
+  position: absolute;
+  border: 2px solid rgba(220, 255, 0, 0.68);
+  border-radius: 999px 42% 999px 48%;
+  box-shadow:
+    inset 0 0 26px rgba(255, 255, 255, 0.5),
+    inset 0 -14px 36px rgba(0, 0, 0, 0.72),
+    0 0 34px rgba(226, 255, 0, 0.26);
+  filter: blur(0.6px) saturate(1.4);
+  mix-blend-mode: screen;
+}
+
+.hero-image-glass-a {
+  left: 15%;
+  top: 9%;
+  width: 72%;
+  height: 55%;
+  transform: rotate(-11deg);
+}
+
+.hero-image-glass-b {
+  left: -6%;
+  top: 51%;
+  width: 88%;
+  height: 34%;
+  transform: rotate(-10deg);
+  opacity: 0.78;
+}
+
+.hero-image-glow {
+  position: absolute;
+  right: -8%;
+  bottom: -11%;
+  width: 64%;
+  height: 45%;
+  border-radius: 999px 0 0 0;
+  background: rgba(238, 255, 0, 0.95);
+  filter: blur(20px);
+  opacity: 0.88;
 }
 
 .liquid-glass {

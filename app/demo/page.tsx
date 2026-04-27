@@ -1,15 +1,15 @@
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, CalendarDays, MapPin, Send, Star } from "lucide-react";
 import { DotLoader } from "@/components/dot-loader";
+import { HeroBackground } from "@/components/hero-background";
 import { SiteHeader } from "@/components/site-header";
-import { VideoBackground } from "@/components/video-background";
 import { adminRows, demoMessages, reservationSummary } from "@/lib/demo-data";
 
 export default function DemoPage() {
   return (
     <main className="min-h-screen bg-[hsl(var(--background))] text-white">
       <section className="video-hero">
-        <VideoBackground />
+        <HeroBackground />
         <SiteHeader variant="hotel" />
 
         <div className="relative z-10 mx-auto grid max-w-7xl gap-8 px-6 pb-24 pt-12 sm:px-8 lg:grid-cols-[0.88fr_1.12fr] lg:items-start lg:pt-20">
