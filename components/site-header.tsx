@@ -37,12 +37,20 @@ export function SiteHeader({ variant = "product", ctaLabel = "Try Demo" }: SiteH
         </Link>
       </nav>
 
-      <Link
-        href="/demo"
-        className="liquid-glass rounded-full px-6 py-2.5 text-sm font-medium text-white transition duration-300 hover:scale-[1.03]"
-      >
-        {ctaLabel}
-      </Link>
+      <div className="flex items-center gap-2">
+        <Link
+          href="/admin"
+          className="hidden rounded-full px-4 py-2.5 text-sm font-medium text-white/70 transition-colors hover:text-white sm:inline-flex"
+        >
+          Sign in
+        </Link>
+        <Link
+          href="/admin"
+          className="liquid-glass rounded-full px-6 py-2.5 text-sm font-medium text-white transition duration-300 hover:scale-[1.03]"
+        >
+          {ctaLabel}
+        </Link>
+      </div>
     </header>
   );
 }

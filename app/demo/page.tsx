@@ -9,7 +9,7 @@ export default function DemoPage() {
   return (
     <main className="min-h-screen bg-[hsl(var(--background))] text-white">
       <section className="demo-static-hero relative min-h-screen overflow-hidden">
-        <SiteHeader variant="hotel" ctaLabel="Open Demo" />
+        <SiteHeader variant="hotel" ctaLabel="Hotel Admin" />
 
         <div className="relative z-10 mx-auto grid max-w-7xl gap-8 px-6 pb-24 pt-12 sm:px-8 lg:grid-cols-[0.88fr_1.12fr] lg:items-start lg:pt-20">
           <section>
