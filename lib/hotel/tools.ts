@@ -298,6 +298,69 @@ export function reservationsForAdmin() {
   });
 }
 
+export function adminDashboardData() {
+  const store = getStore();
+  const roomsById = new Map(store.rooms.map((room) => [room.roomId, room]));
+
+  const reservations = store.reservations.map((reservation) => {
+    const room = roomsById.get(reservation.roomId);
+    const nights = nightsBetween(reservation.checkin, reservation.checkout);
+    const total = (room?.pricePerNight ?? 0) * nights;
+
+    return {
+      bookingId: reservation.bookingId,
+      guestName: reservation.guestName,
+      contact: reservation.email || reservation.phone,
+      room: room?.label ?? reservation.roomId,
+      dates: `${reservation.checkin} to ${reservation.checkout}`,
+      status: reservation.status,
+      total: dollars(total),
+    };
+  });
+
+  const inventory = store.rooms.map((room) => {
+    const activeReservations = store.reservations.filter(
+      (reservation) => reservation.roomId === room.roomId && reservation.status !== "Checked Out",
+    );
+
+    return {
+      roomId: room.roomId,
+      label: room.label,
+      roomType: room.roomType,
+      rate: dollars(room.pricePerNight),
+      floor: String(room.floor),
+      view: room.view,
+      maxGuests: String(room.maxGuests),
+      status: activeReservations.length > 0 ? "Reserved" : "Available",
+    };
+  });
+
+  const checkedIn = store.reservations.filter((reservation) => reservation.status === "Checked In").length;
+  const confirmed = store.reservations.filter((reservation) => reservation.status === "Confirmed").length;
+  const checkedOut = store.reservations.filter((reservation) => reservation.status === "Checked Out").length;
+  const roomRevenue = store.reservations.reduce((sum, reservation) => {
+    const room = roomsById.get(reservation.roomId);
+    return sum + (room?.pricePerNight ?? 0) * nightsBetween(reservation.checkin, reservation.checkout);
+  }, 0);
+
+  return {
+    hotel: {
+      name: "Sriram Hotel",
+      location: "Downtown Boston",
+      dataSource: "Mock data",
+      guestSite: "/demo",
+    },
+    metrics: [
+      { label: "Reservations", value: String(store.reservations.length), detail: `${confirmed} upcoming` },
+      { label: "Checked in", value: String(checkedIn), detail: "Guests currently in-house" },
+      { label: "Rooms", value: String(store.rooms.length), detail: `${store.rooms.length - checkedIn} available now` },
+      { label: "Demo revenue", value: dollars(roomRevenue), detail: `${checkedOut} completed stays` },
+    ],
+    reservations,
+    inventory,
+  };
+}
+
 export function toolFromName(name: string, rawArgs: unknown): ToolResult {
   const args = typeof rawArgs === "object" && rawArgs !== null ? (rawArgs as Record<string, unknown>) : {};
 
@@ -328,4 +391,3 @@ export function toolFromName(name: string, rawArgs: unknown): ToolResult {
       return { ok: false, message: `Unknown tool: ${name}` };
   }
 }
-
