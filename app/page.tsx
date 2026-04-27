@@ -40,7 +40,7 @@ export default function Home() {
                 href="/demo"
                 className="liquid-glass inline-flex cursor-pointer items-center justify-center gap-2 rounded-full px-14 py-5 text-base font-medium text-white transition duration-300 hover:scale-[1.03]"
               >
-                Begin Journey
+                Try the demo
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <a

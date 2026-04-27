@@ -2,9 +2,10 @@ import Link from "next/link";
 
 type SiteHeaderProps = {
   variant?: "product" | "hotel";
+  ctaLabel?: string;
 };
 
-export function SiteHeader({ variant = "product" }: SiteHeaderProps) {
+export function SiteHeader({ variant = "product", ctaLabel = "Try Demo" }: SiteHeaderProps) {
   const isHotel = variant === "hotel";
 
   return (
@@ -40,7 +41,7 @@ export function SiteHeader({ variant = "product" }: SiteHeaderProps) {
         href="/demo"
         className="liquid-glass rounded-full px-6 py-2.5 text-sm font-medium text-white transition duration-300 hover:scale-[1.03]"
       >
-        Begin Journey
+        {ctaLabel}
       </Link>
     </header>
   );
