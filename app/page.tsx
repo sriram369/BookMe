@@ -8,15 +8,15 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { ProductConsole } from "@/components/product-console";
-import { HeroBackground } from "@/components/hero-background";
 import { SiteHeader } from "@/components/site-header";
+import { VideoBackground } from "@/components/video-background";
 import { operatorStats, trustItems, workflowCards } from "@/lib/demo-data";
 
 export default function Home() {
   return (
     <main className="min-h-screen overflow-hidden bg-[hsl(var(--background))] text-white">
       <section className="video-hero">
-        <HeroBackground />
+        <VideoBackground />
         <SiteHeader />
 
         <div className="relative z-10 mx-auto grid w-full max-w-7xl gap-10 px-6 pb-40 pt-24 sm:px-8 lg:grid-cols-[0.92fr_1.08fr] lg:items-center lg:pb-40 lg:pt-32">
