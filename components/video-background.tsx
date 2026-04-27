@@ -9,6 +9,7 @@ export function VideoBackground() {
       loop
       muted
       playsInline
+      preload="auto"
       src={HERO_VIDEO_URL}
     />
   );
