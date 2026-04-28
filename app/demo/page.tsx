@@ -4,12 +4,27 @@ import { DotLoader } from "@/components/dot-loader";
 import { FrontDeskChat } from "@/components/front-desk-chat";
 import { SiteHeader } from "@/components/site-header";
 import { adminRows } from "@/lib/demo-data";
+import { findHotelConfig, getHotelConfig } from "@/lib/hotel/config-store";
+import { notFound } from "next/navigation";
 
-export default function DemoPage() {
+export default async function DemoPage({
+  searchParams,
+}: {
+  searchParams?: { hotel?: string };
+}) {
+  const hotel = searchParams?.hotel
+    ? await findHotelConfig(searchParams.hotel)
+    : await getHotelConfig();
+  if (!hotel) notFound();
+
+  const rates = hotel.roomTypes.map((room) => Number(room.rate || 0)).filter(Number.isFinite);
+  const lowestRate = rates.length ? Math.min(...rates) : 3499;
+  const primaryRoomType = hotel.roomTypes[0]?.type ?? "Deluxe AC";
+
   return (
     <main className="min-h-screen bg-[hsl(var(--background))] text-white">
       <section className="demo-static-hero relative min-h-screen overflow-hidden">
-        <SiteHeader variant="hotel" ctaLabel="Hotel Admin" />
+        <SiteHeader variant="hotel" hotelName={hotel.hotelName} ctaLabel="Hotel Admin" ctaHref={`/admin?hotel=${hotel.slug}`} />
 
         <div className="relative z-10 mx-auto grid max-w-7xl gap-8 px-6 pb-24 pt-12 sm:px-8 lg:grid-cols-[0.88fr_1.12fr] lg:items-start lg:pt-20">
           <section>
@@ -19,13 +34,13 @@ export default function DemoPage() {
             </Link>
             <div className="liquid-glass mb-6 inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-white/[0.78]">
               <MapPin className="h-4 w-4 text-white" />
-              Downtown Boston
+              {hotel.city}
             </div>
             <h1
               className="animate-fade-rise max-w-3xl text-5xl font-normal leading-[0.95] tracking-[-2.46px] text-white sm:text-7xl md:text-8xl"
               style={{ fontFamily: "'Instrument Serif', serif" }}
             >
-              Welcome to <em className="not-italic text-white/60">Sriram Hotel.</em>
+              Welcome to <em className="not-italic text-white/60">{hotel.hotelName}.</em>
             </h1>
             <p className="animate-fade-rise-delay mt-8 max-w-2xl text-base leading-relaxed text-white/[0.62] sm:text-lg">
               Book a room, check in, or check out with our AI front desk. No line, no phone call, no app download.
@@ -49,19 +64,21 @@ export default function DemoPage() {
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/[0.45]">
                     Tonight
                   </p>
-                  <h2 className="mt-1 text-xl font-medium text-white">King rooms from $145</h2>
+                  <h2 className="mt-1 text-xl font-medium text-white">
+                    {primaryRoomType} from ₹{lowestRate.toLocaleString("en-IN")}
+                  </h2>
                 </div>
                 <CalendarDays className="h-6 w-6 text-white" />
               </div>
               <div className="mt-5 grid gap-3 text-sm text-white/[0.58] sm:grid-cols-3">
-                <span>Quiet floors</span>
-                <span>Fast check-in</span>
-                <span>Key at desk</span>
+                <span>{hotel.checkinWindow}</span>
+                <span>{hotel.sourceSystem}</span>
+                <span>Staff handoff ready</span>
               </div>
             </div>
           </section>
 
-          <FrontDeskChat />
+          <FrontDeskChat hotelSlug={hotel.slug} hotelName={hotel.hotelName} />
         </div>
       </section>
 

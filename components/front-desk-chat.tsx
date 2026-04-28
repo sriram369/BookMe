@@ -18,14 +18,6 @@ type AgentResponse = {
   toolCalls?: string[];
 };
 
-const starterMessages: ChatMessage[] = [
-  {
-    role: "assistant",
-    content:
-      "Welcome to Sriram Hotel. I can help you book a room, check in, or check out.",
-  },
-];
-
 const examples = [
   "I'm checking in. My phone number is 617-555-0192.",
   "I want to check out, booking ID BKM-1029.",
@@ -58,8 +50,18 @@ function SummaryCardView({ card }: { card: SummaryCard }) {
   );
 }
 
-export function FrontDeskChat() {
-  const [messages, setMessages] = useState<ChatMessage[]>(starterMessages);
+type FrontDeskChatProps = {
+  hotelSlug?: string;
+  hotelName?: string;
+};
+
+export function FrontDeskChat({ hotelSlug, hotelName = "Sriram Hotel" }: FrontDeskChatProps) {
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      role: "assistant",
+      content: `Welcome to ${hotelName}. I can help you book a room, check in, or check out.`,
+    },
+  ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -85,6 +87,7 @@ export function FrontDeskChat() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: [...apiMessages, { role: "user", content }],
+          hotelSlug,
         }),
       });
 
@@ -199,4 +202,3 @@ export function FrontDeskChat() {
     </section>
   );
 }
-

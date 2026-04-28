@@ -16,7 +16,10 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
-import { adminDashboardData } from "@/lib/hotel/tools";
+import { adminDashboardDataAsync } from "@/lib/hotel/tools";
+import { findHotelConfig, getHotelConfig } from "@/lib/hotel/config-store";
+import { listConnectorBackends } from "@/lib/connectors";
+import { notFound } from "next/navigation";
 
 const automations = [
   {
@@ -68,8 +71,18 @@ function StatusPill({ status }: { status: string }) {
   return <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${tone}`}>{status}</span>;
 }
 
-export default function AdminPage() {
-  const dashboard = adminDashboardData();
+export default async function AdminPage({
+  searchParams,
+}: {
+  searchParams?: { hotel?: string };
+}) {
+  const hotelConfig = searchParams?.hotel
+    ? await findHotelConfig(searchParams.hotel)
+    : await getHotelConfig();
+  if (!hotelConfig) notFound();
+
+  const dashboard = await adminDashboardDataAsync(hotelConfig);
+  const connectors = await Promise.all(listConnectorBackends().map((connector) => connector.health()));
 
   return (
     <main className="min-h-screen bg-[hsl(var(--background))] text-white">
@@ -109,7 +122,7 @@ export default function AdminPage() {
             </nav>
 
             <Link
-              href="/demo"
+              href={dashboard.hotel.guestSite}
               className="liquid-glass mt-6 flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-medium text-white transition hover:scale-[1.02]"
             >
               View guest site
@@ -140,10 +153,13 @@ export default function AdminPage() {
                     <Settings className="h-4 w-4" />
                     Configure hotel
                   </button>
-                  <button className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-medium text-zinc-950 transition hover:scale-[1.03]">
+                  <a
+                    href="/api/connectors"
+                    className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-medium text-zinc-950 transition hover:scale-[1.03]"
+                  >
                     Connect Sheets
                     <PlugZap className="h-4 w-4" />
-                  </button>
+                  </a>
                 </div>
               </div>
 
@@ -156,6 +172,52 @@ export default function AdminPage() {
                   </div>
                 ))}
               </div>
+
+              {dashboard.hotel.proposal ? (
+                <div className="mt-6 rounded-[1.5rem] border border-white/10 bg-black/20 p-5">
+                  <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-[0.18em] text-white/[0.45]">
+                        Active quote
+                      </p>
+                      <h2 className="mt-2 text-2xl font-medium text-white">
+                        {dashboard.hotel.proposal.recommendedPlan}
+                      </h2>
+                    </div>
+                    <div className="text-left sm:text-right">
+                      <p className="text-xl font-medium text-white">{dashboard.hotel.proposal.monthlyPrice}</p>
+                      <p className="text-xs text-white/[0.5]">{dashboard.hotel.proposal.setupFee}</p>
+                    </div>
+                  </div>
+                  <p className="mt-4 text-sm leading-6 text-white/[0.6]">{dashboard.hotel.proposal.summary}</p>
+                </div>
+              ) : null}
+            </section>
+
+            <section className="grid gap-4 lg:grid-cols-2">
+              {connectors.map((connector) => (
+                <article key={connector.id} className="liquid-glass rounded-[1.5rem] p-5">
+                  <div className="mb-4 flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-[0.18em] text-white/[0.45]">
+                        Connector
+                      </p>
+                      <h2 className="mt-1 font-medium text-white">{connector.name}</h2>
+                    </div>
+                    <StatusPill
+                      status={
+                        connector.status === "ok"
+                          ? "Live"
+                          : connector.status === "not_configured"
+                            ? "Setup needed"
+                            : "Error"
+                      }
+                    />
+                  </div>
+                  <p className="text-sm leading-6 text-white/[0.58]">{connector.message}</p>
+                  <p className="mt-3 text-xs text-white/[0.42]">Checked {connector.checkedAt}</p>
+                </article>
+              ))}
             </section>
 
             <section id="automation" className="grid gap-4 lg:grid-cols-3">
@@ -261,4 +323,3 @@ export default function AdminPage() {
     </main>
   );
 }
-

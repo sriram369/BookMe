@@ -1,0 +1,53 @@
+import type { Reservation, Room } from "@/lib/hotel/types";
+
+export type ConnectorHealthStatus = "ok" | "not_configured" | "error";
+
+export type ConnectorHealth = {
+  id: string;
+  name: string;
+  status: ConnectorHealthStatus;
+  message: string;
+  checkedAt: string;
+  capabilities?: {
+    reservationsRead: boolean;
+    reservationsWrite: boolean;
+    inventoryRead: boolean;
+    inventoryWrite: boolean;
+    initialize: boolean;
+  };
+  details?: Record<string, unknown>;
+};
+
+export type ConnectorInitResult = ConnectorHealth & {
+  createdSheets?: string[];
+  existingSheets?: string[];
+};
+
+export type ReservationCreateInput = Omit<Reservation, "bookingId" | "createdAt"> & {
+  bookingId?: string;
+  createdAt?: string;
+};
+
+export type ReservationConnector = {
+  listReservations(): Promise<Reservation[]>;
+  createReservation(input: ReservationCreateInput): Promise<Reservation>;
+  updateReservationStatus(
+    bookingId: string,
+    status: Reservation["status"],
+    patch?: Partial<Reservation>,
+  ): Promise<Reservation>;
+};
+
+export type InventoryConnector = {
+  listRooms(): Promise<Room[]>;
+  updateRoom(roomId: string, patch: Partial<Room>): Promise<Room>;
+};
+
+export type ConnectorBackend = {
+  id: string;
+  name: string;
+  health(): Promise<ConnectorHealth>;
+  initialize?(): Promise<ConnectorInitResult>;
+  reservations?: ReservationConnector;
+  inventory?: InventoryConnector;
+};

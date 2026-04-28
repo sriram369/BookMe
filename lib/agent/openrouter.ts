@@ -1,5 +1,6 @@
 import type { SummaryCard, ToolResult } from "@/lib/hotel/types";
-import { toolFromName } from "@/lib/hotel/tools";
+import { toolFromNameAsync } from "@/lib/hotel/tools";
+import { getHotelConfig, type HotelConfig } from "@/lib/hotel/config-store";
 
 export type ClientChatMessage = {
   role: "user" | "assistant";
@@ -44,11 +45,16 @@ export type AgentResult = {
   toolCalls: string[];
 };
 
-const systemPrompt = () => {
+const systemPrompt = (hotel: HotelConfig) => {
   const today = new Date().toISOString().slice(0, 10);
 
-  return `You are BookMe, the AI front desk for Sriram Hotel in Downtown Boston.
+  return `You are BookMe, the AI front desk for ${hotel.hotelName} in ${hotel.city}.
 Today is ${today}.
+Hotel check-in window: ${hotel.checkinWindow}.
+Escalation contact for staff handoff: ${hotel.escalationContact}.
+Reservation source: ${hotel.sourceSystem}.
+Room types and base rates:
+${hotel.roomTypes.map((room) => `- ${room.type}: ${room.count} rooms, INR ${room.rate}/night`).join("\n")}
 
 You can help with exactly three workflows:
 1. New room booking
@@ -61,7 +67,7 @@ Rules:
 - For booking, call check_availability before create_booking.
 - Do not call create_booking unless the guest explicitly confirms.
 - If information is missing, ask one concise follow-up question.
-- Cancellations, refunds, payments, complaints, corporate rates, and accessibility accommodations require human staff.
+- Cancellations, refunds, payments, complaints, corporate rates, KYC disputes, and accessibility accommodations require human staff.
 - Keep responses short, calm, and hotel-appropriate.`;
 };
 
@@ -164,7 +170,7 @@ function parseToolArgs(value: string) {
   }
 }
 
-function fallbackAgent(messages: ClientChatMessage[]): AgentResult {
+async function fallbackAgent(messages: ClientChatMessage[], hotel: HotelConfig): Promise<AgentResult> {
   const latest = messages[messages.length - 1]?.content ?? "";
   const lower = latest.toLowerCase();
   const bookingId = latest.match(/bkm-\d{4,}/i)?.[0];
@@ -172,7 +178,7 @@ function fallbackAgent(messages: ClientChatMessage[]): AgentResult {
 
   if (lower.includes("check in") || lower.includes("checking in")) {
     if (bookingId) {
-      const result = toolFromName("checkin_guest", { booking_id: bookingId });
+      const result = await toolFromNameAsync("checkin_guest", { booking_id: bookingId });
       return {
         message: result.message,
         card: result.card,
@@ -181,10 +187,10 @@ function fallbackAgent(messages: ClientChatMessage[]): AgentResult {
     }
 
     if (phone) {
-      const lookup = toolFromName("lookup_guest", { identifier: phone });
+      const lookup = await toolFromNameAsync("lookup_guest", { identifier: phone });
       const reservation = lookup.data as { bookingId?: string } | undefined;
       if (lookup.ok && reservation?.bookingId) {
-        const checkin = toolFromName("checkin_guest", { booking_id: reservation.bookingId });
+        const checkin = await toolFromNameAsync("checkin_guest", { booking_id: reservation.bookingId });
         return {
           message: checkin.message,
           card: checkin.card,
@@ -209,7 +215,7 @@ function fallbackAgent(messages: ClientChatMessage[]): AgentResult {
       };
     }
 
-    const result = toolFromName("checkout_guest", { booking_id: bookingId });
+    const result = await toolFromNameAsync("checkout_guest", { booking_id: bookingId });
     return {
       message: result.message,
       card: result.card,
@@ -219,19 +225,20 @@ function fallbackAgent(messages: ClientChatMessage[]): AgentResult {
 
   return {
     message:
-      "I can help you book a room, check in, or check out. What would you like to do today?",
+      `I can help you book a room, check in, or check out at ${hotel.hotelName}. What would you like to do today?`,
     toolCalls: [],
   };
 }
 
-export async function runBookMeAgent(messages: ClientChatMessage[]): Promise<AgentResult> {
+export async function runBookMeAgent(messages: ClientChatMessage[], hotelSlug?: string): Promise<AgentResult> {
+  const hotel = await getHotelConfig(hotelSlug);
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
-    return fallbackAgent(messages);
+    return fallbackAgent(messages, hotel);
   }
 
   const requestMessages: OpenRouterMessage[] = [
-    { role: "system", content: systemPrompt() },
+    { role: "system", content: systemPrompt(hotel) },
     ...messages.map((message) => ({ role: message.role, content: message.content }) as OpenRouterMessage),
   ];
 
@@ -259,20 +266,20 @@ export async function runBookMeAgent(messages: ClientChatMessage[]): Promise<Age
 
     const data = (await response.json()) as OpenRouterResponse;
     if (!response.ok || data.error) {
-      return fallbackAgent(messages);
+      return fallbackAgent(messages, hotel);
     }
 
     model = data.model;
     const assistant = data.choices?.[0]?.message;
     if (!assistant) {
-      return fallbackAgent(messages);
+      return fallbackAgent(messages, hotel);
     }
 
     const calls = assistant.tool_calls ?? [];
     if (calls.length === 0) {
       const content = assistant.content?.trim();
       return {
-        message: content || fallbackAgent(messages).message,
+        message: content || (await fallbackAgent(messages, hotel)).message,
         card: latestCard,
         model,
         toolCalls,
@@ -286,7 +293,7 @@ export async function runBookMeAgent(messages: ClientChatMessage[]): Promise<Age
     });
 
     for (const call of calls) {
-      const result: ToolResult = toolFromName(call.function.name, parseToolArgs(call.function.arguments));
+      const result: ToolResult = await toolFromNameAsync(call.function.name, parseToolArgs(call.function.arguments));
       toolCalls.push(call.function.name);
       latestCard = result.card ?? latestCard;
       requestMessages.push({
@@ -300,10 +307,9 @@ export async function runBookMeAgent(messages: ClientChatMessage[]): Promise<Age
   return {
     message: latestCard
       ? `${latestCard.title}: ${latestCard.status}.`
-      : fallbackAgent(messages).message,
+      : (await fallbackAgent(messages, hotel)).message,
     card: latestCard,
     model,
     toolCalls,
   };
 }
-

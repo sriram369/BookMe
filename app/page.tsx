@@ -11,6 +11,7 @@ import { ProductConsole } from "@/components/product-console";
 import { SiteHeader } from "@/components/site-header";
 import { VideoBackground } from "@/components/video-background";
 import { operatorStats, trustItems, workflowCards } from "@/lib/demo-data";
+import { pricingPlans } from "@/lib/onboarding-data";
 
 export default function Home() {
   return (
@@ -37,17 +38,17 @@ export default function Home() {
 
             <div className="animate-fade-rise-delay-2 mt-12 flex flex-col gap-3 sm:flex-row">
               <Link
-                href="/demo"
+                href="/signup"
                 className="liquid-glass inline-flex cursor-pointer items-center justify-center gap-2 rounded-full px-14 py-5 text-base font-medium text-white transition duration-300 hover:scale-[1.03]"
               >
-                Try the demo
+                Sign up
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <a
-                href="#workflow"
+                href="/demo"
                 className="liquid-glass inline-flex items-center justify-center rounded-full px-8 py-5 text-base font-medium text-white/80 transition duration-300 hover:scale-[1.03] hover:text-white"
               >
-                See workflows
+                View demo
               </a>
             </div>
           </div>
@@ -127,6 +128,44 @@ export default function Home() {
               </article>
             ))}
           </div>
+        </div>
+      </section>
+
+      <section id="pricing" className="mx-auto max-w-7xl px-5 py-20 sm:px-8">
+        <div className="mb-10 flex flex-col justify-between gap-4 md:flex-row md:items-end">
+          <div>
+            <p className="text-sm font-medium uppercase tracking-[0.2em] text-white/[0.45]">
+              India pricing
+            </p>
+            <h2
+              className="mt-3 max-w-2xl text-5xl font-normal leading-none tracking-[-1.2px] text-white"
+              style={{ fontFamily: "'Instrument Serif', serif" }}
+            >
+              Start with a pilot, then charge for integrations.
+            </h2>
+          </div>
+          <Link href="/onboarding" className="inline-flex items-center gap-2 text-sm font-medium text-white/70 transition-colors hover:text-white">
+            Open onboarding
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-3">
+          {pricingPlans.map((plan) => (
+            <article key={plan.name} className="liquid-glass rounded-[1.5rem] p-5">
+              <p className="text-sm font-medium text-white">{plan.name}</p>
+              <p className="mt-4 text-4xl font-medium text-white">{plan.price}</p>
+              <p className="mt-2 text-sm text-white/[0.55]">{plan.note}</p>
+              <div className="mt-5 space-y-3">
+                {plan.features.slice(0, 3).map((feature) => (
+                  <div key={feature} className="flex gap-3 text-sm text-white/[0.62]">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-white" />
+                    {feature}
+                  </div>
+                ))}
+              </div>
+            </article>
+          ))}
         </div>
       </section>
 

@@ -3,7 +3,7 @@ import { runBookMeAgent, type ClientChatMessage } from "@/lib/agent/openrouter";
 
 export async function POST(request: Request) {
   try {
-    const body = (await request.json()) as { messages?: ClientChatMessage[] };
+    const body = (await request.json()) as { messages?: ClientChatMessage[]; hotelSlug?: string };
     const messages = (body.messages ?? []).filter(
       (message) =>
         (message.role === "user" || message.role === "assistant") &&
@@ -18,7 +18,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const result = await runBookMeAgent(messages.slice(-12));
+    const result = await runBookMeAgent(messages.slice(-12), body.hotelSlug);
     return NextResponse.json(result);
   } catch {
     return NextResponse.json(
@@ -30,4 +30,3 @@ export async function POST(request: Request) {
     );
   }
 }
-

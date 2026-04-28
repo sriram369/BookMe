@@ -3,9 +3,11 @@ import Link from "next/link";
 type SiteHeaderProps = {
   variant?: "product" | "hotel";
   ctaLabel?: string;
+  ctaHref?: string;
+  hotelName?: string;
 };
 
-export function SiteHeader({ variant = "product", ctaLabel = "Try Demo" }: SiteHeaderProps) {
+export function SiteHeader({ variant = "product", ctaLabel = "Try Demo", ctaHref = "/signup", hotelName = "Sriram Hotel" }: SiteHeaderProps) {
   const isHotel = variant === "hotel";
 
   return (
@@ -15,7 +17,7 @@ export function SiteHeader({ variant = "product", ctaLabel = "Try Demo" }: SiteH
         className="display-font text-3xl tracking-tight text-white"
         aria-label="BookMe home"
       >
-        {isHotel ? "Sriram Hotel" : "BookMe"}
+        {isHotel ? hotelName : "BookMe"}
         <sup className="text-xs">®</sup>
       </Link>
 
@@ -23,29 +25,32 @@ export function SiteHeader({ variant = "product", ctaLabel = "Try Demo" }: SiteH
         <Link href="/" className="text-white transition-colors hover:text-white">
           Home
         </Link>
-        <Link href="/#product" className="transition-colors hover:text-white">
-          Studio
+        <Link href="/demo" className="transition-colors hover:text-white">
+          Demo
+        </Link>
+        <Link href="/solution" className="transition-colors hover:text-white">
+          Solution
+        </Link>
+        <Link href="/onboarding" className="transition-colors hover:text-white">
+          Onboarding
         </Link>
         <Link href="/#workflow" className="transition-colors hover:text-white">
-          About
+          Workflows
         </Link>
-        <Link href="/#proof" className="transition-colors hover:text-white">
-          Journal
-        </Link>
-        <Link href="/demo" className="transition-colors hover:text-white">
-          Reach Us
+        <Link href="/#pricing" className="transition-colors hover:text-white">
+          Pricing
         </Link>
       </nav>
 
       <div className="flex items-center gap-2">
         <Link
-          href="/admin"
+          href="/signin"
           className="hidden rounded-full px-4 py-2.5 text-sm font-medium text-white/70 transition-colors hover:text-white sm:inline-flex"
         >
           Sign in
         </Link>
         <Link
-          href="/admin"
+          href={ctaHref}
           className="liquid-glass rounded-full px-6 py-2.5 text-sm font-medium text-white transition duration-300 hover:scale-[1.03]"
         >
           {ctaLabel}
