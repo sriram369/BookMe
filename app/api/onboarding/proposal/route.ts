@@ -1,16 +1,16 @@
 import { NextResponse } from "next/server";
-import { generateOwnerProposal, type OwnerProposalInput } from "@/lib/onboarding/proposal";
+import { generateOwnerProposal } from "@/lib/onboarding/proposal";
+import { validateOwnerProposalInput } from "@/lib/onboarding/validation";
 
 export async function POST(request: Request) {
-  const input = (await request.json()) as Partial<OwnerProposalInput>;
+  const body = await request.json().catch(() => null);
+  const input = validateOwnerProposalInput(body);
 
-  const proposal = await generateOwnerProposal({
-    hotelName: String(input.hotelName ?? ""),
-    city: String(input.city ?? ""),
-    sourceSystem: String(input.sourceSystem ?? "Google Sheets or Excel"),
-    totalRooms: Number(input.totalRooms ?? 0),
-    roomTypes: Array.isArray(input.roomTypes) ? input.roomTypes : [],
-  });
+  if (!input.ok) {
+    return NextResponse.json({ error: "Invalid proposal input", errors: input.errors }, { status: 400 });
+  }
+
+  const proposal = await generateOwnerProposal(input.value);
 
   return NextResponse.json({ proposal });
 }

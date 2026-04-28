@@ -48,6 +48,7 @@ export function OnboardingFlow() {
   const [photoName, setPhotoName] = useState("");
   const [proposal, setProposal] = useState<OwnerProposal | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [formError, setFormError] = useState("");
   const [savedHotel, setSavedHotel] = useState<HotelConfig | null>(null);
   const [chatInput, setChatInput] = useState("");
   const [questionIndex, setQuestionIndex] = useState(0);
@@ -65,60 +66,90 @@ export function OnboardingFlow() {
   );
 
   async function generateProposal() {
+    setFormError("");
     setIsGenerating(true);
-    const response = await fetch("/api/onboarding/proposal", {
+    try {
+      const response = await fetch("/api/onboarding/proposal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-        hotelName,
-        city,
-        sourceSystem: activeSystem,
-        totalRooms,
-        roomTypes: rooms,
-      }),
-    });
+          hotelName,
+          city,
+          sourceSystem: activeSystem,
+          totalRooms,
+          roomTypes: rooms,
+        }),
+      });
 
-    const data = (await response.json()) as { proposal?: OwnerProposal };
-    setProposal(data.proposal ?? null);
-    setIsGenerating(false);
+      const data = (await response.json()) as { proposal?: OwnerProposal; errors?: string[]; error?: string };
+      if (!response.ok) {
+        setFormError(data.errors?.join(" ") || data.error || "Could not generate proposal.");
+        return;
+      }
+
+      setProposal(data.proposal ?? null);
+    } catch {
+      setFormError("Could not reach the proposal service. Try again.");
+    } finally {
+      setIsGenerating(false);
+    }
   }
 
   async function saveSetup() {
+    setFormError("");
     setIsGenerating(true);
-    const activeProposal = proposal ?? (await fetch("/api/onboarding/proposal", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        hotelName,
-        city,
-        sourceSystem: activeSystem,
-        totalRooms,
-        roomTypes: rooms,
-      }),
-    })
-      .then((response) => response.json() as Promise<{ proposal?: OwnerProposal }>)
-      .then((data) => data.proposal ?? null));
+    try {
+      let activeProposal = proposal;
 
-    const response = await fetch("/api/hotels", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        hotelName,
-        city,
-        checkinWindow,
-        escalationContact,
-        gstin,
-        sourceSystem: activeSystem,
-        roomTypes: rooms,
-        totalRooms,
-        photoName,
-        proposal: activeProposal,
-      }),
-    });
-    const data = (await response.json()) as { hotel?: HotelConfig };
-    setProposal(activeProposal);
-    setSavedHotel(data.hotel ?? null);
-    setIsGenerating(false);
+      if (!activeProposal) {
+        const proposalResponse = await fetch("/api/onboarding/proposal", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            hotelName,
+            city,
+            sourceSystem: activeSystem,
+            totalRooms,
+            roomTypes: rooms,
+          }),
+        });
+        const proposalData = (await proposalResponse.json()) as { proposal?: OwnerProposal; errors?: string[]; error?: string };
+        if (!proposalResponse.ok) {
+          setFormError(proposalData.errors?.join(" ") || proposalData.error || "Could not generate proposal.");
+          return;
+        }
+        activeProposal = proposalData.proposal ?? null;
+      }
+
+      const response = await fetch("/api/hotels", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          hotelName,
+          city,
+          checkinWindow,
+          escalationContact,
+          gstin,
+          sourceSystem: activeSystem,
+          roomTypes: rooms,
+          totalRooms,
+          photoName,
+          proposal: activeProposal,
+        }),
+      });
+      const data = (await response.json()) as { hotel?: HotelConfig; errors?: string[]; error?: string };
+      if (!response.ok) {
+        setFormError(data.errors?.join(" ") || data.error || "Could not save hotel setup.");
+        return;
+      }
+
+      setProposal(activeProposal);
+      setSavedHotel(data.hotel ?? null);
+    } catch {
+      setFormError("Could not save the hotel setup. Try again.");
+    } finally {
+      setIsGenerating(false);
+    }
   }
 
   function applyChatAnswer(answer: string, index: number) {
@@ -598,6 +629,12 @@ export function OnboardingFlow() {
           {isGenerating ? "Saving setup..." : "Save hotel setup"}
           <Check className="h-4 w-4" />
         </button>
+
+        {formError ? (
+          <div className="mt-5 rounded-[1.5rem] border border-red-200/20 bg-red-200/[0.08] p-4 text-sm leading-6 text-red-50">
+            {formError}
+          </div>
+        ) : null}
 
         {savedHotel ? (
           <div className="mt-5 rounded-[1.5rem] border border-emerald-200/20 bg-emerald-200/[0.08] p-5">

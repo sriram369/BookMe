@@ -1,24 +1,20 @@
 import { NextResponse } from "next/server";
-import { runBookMeAgent, type ClientChatMessage } from "@/lib/agent/openrouter";
+import { runBookMeAgent } from "@/lib/agent/openrouter";
+import { validateClientMessages } from "@/lib/onboarding/validation";
 
 export async function POST(request: Request) {
   try {
-    const body = (await request.json()) as { messages?: ClientChatMessage[]; hotelSlug?: string };
-    const messages = (body.messages ?? []).filter(
-      (message) =>
-        (message.role === "user" || message.role === "assistant") &&
-        typeof message.content === "string" &&
-        message.content.trim().length > 0,
-    );
+    const body = await request.json().catch(() => null);
+    const input = validateClientMessages(body);
 
-    if (messages.length === 0) {
+    if (!input.ok) {
       return NextResponse.json(
-        { message: "Please send a message to the front desk.", toolCalls: [] },
+        { message: input.errors[0] ?? "Please send a message to the front desk.", toolCalls: [] },
         { status: 400 },
       );
     }
 
-    const result = await runBookMeAgent(messages.slice(-12), body.hotelSlug);
+    const result = await runBookMeAgent(input.value.messages, input.value.hotelSlug);
     return NextResponse.json(result);
   } catch {
     return NextResponse.json(
