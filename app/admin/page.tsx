@@ -248,7 +248,7 @@ export default async function AdminPage({
               </div>
 
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[760px] text-left text-sm">
+                <table className="w-full min-w-[900px] text-left text-sm">
                   <thead className="border-b border-white/10 text-xs uppercase tracking-[0.16em] text-white/[0.42]">
                     <tr>
                       <th className="px-5 py-3 font-medium">Booking</th>
@@ -256,6 +256,7 @@ export default async function AdminPage({
                       <th className="px-5 py-3 font-medium">Room</th>
                       <th className="px-5 py-3 font-medium">Dates</th>
                       <th className="px-5 py-3 font-medium">Status</th>
+                      <th className="px-5 py-3 font-medium">Payment</th>
                       <th className="px-5 py-3 font-medium">Total</th>
                     </tr>
                   </thead>
@@ -271,6 +272,10 @@ export default async function AdminPage({
                         <td className="px-5 py-4 text-white/[0.64]">{reservation.dates}</td>
                         <td className="px-5 py-4">
                           <StatusPill status={reservation.status} />
+                        </td>
+                        <td className="px-5 py-4">
+                          <p className="font-medium text-white">{reservation.paymentStatus}</p>
+                          <p className="text-xs text-white/[0.45]">{reservation.paymentMode}</p>
                         </td>
                         <td className="px-5 py-4 text-white">{reservation.total}</td>
                       </tr>

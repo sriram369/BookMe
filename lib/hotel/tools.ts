@@ -17,6 +17,22 @@ const rupees = (amount: number) =>
     maximumFractionDigits: 0,
   }).format(amount);
 
+const titleFromSnake = (value: string) =>
+  value
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+
+const paymentStatusLabel = (reservation: Reservation) => {
+  if ((reservation.payAtProperty ?? true) || (reservation.paymentMode ?? "pay_at_property") === "pay_at_property") {
+    return "Pay at property";
+  }
+  return titleFromSnake(reservation.paymentStatus ?? "pending");
+};
+
+const paymentModeLabel = (reservation: Reservation) => titleFromSnake(reservation.paymentMode ?? "pay_at_property");
+
 const normalizeIdentifier = (identifier: string) =>
   identifier.trim().toLowerCase().replace(/[()\-\s.]/g, "");
 
@@ -96,6 +112,7 @@ function reservationCardWithRoom(
       { label: "Room", value: room?.label ?? reservation.roomId },
       { label: "Dates", value: `${reservation.checkin} to ${reservation.checkout}` },
       { label: "Total", value: money(total) },
+      { label: "Payment", value: paymentStatusLabel(reservation) },
     ],
   };
 }
@@ -240,6 +257,10 @@ export function createBooking(args: {
     checkout: args.checkout,
     status: "Confirmed",
     createdAt: new Date().toISOString(),
+    paymentStatus: "pending",
+    paymentMode: "pay_at_property",
+    paymentProvider: "manual",
+    payAtProperty: true,
   };
 
   store.reservations.unshift(reservation);
@@ -356,6 +377,8 @@ export function adminDashboardData(config?: HotelConfig) {
       dates: `${reservation.checkin} to ${reservation.checkout}`,
       status: reservation.status,
       total: dollars(total),
+      paymentStatus: paymentStatusLabel(reservation),
+      paymentMode: paymentModeLabel(reservation),
     };
   });
 
@@ -441,6 +464,8 @@ export async function adminDashboardDataAsync(config?: HotelConfig) {
         dates: `${reservation.checkin} to ${reservation.checkout}`,
         status: reservation.status,
         total: rupees(total),
+        paymentStatus: paymentStatusLabel(reservation),
+        paymentMode: paymentModeLabel(reservation),
       };
     });
 
@@ -675,6 +700,10 @@ async function createBookingConnected(
     checkin: args.checkin,
     checkout: args.checkout,
     status: "Confirmed",
+    paymentStatus: "pending",
+    paymentMode: "pay_at_property",
+    paymentProvider: "manual",
+    payAtProperty: true,
   });
 
   return {

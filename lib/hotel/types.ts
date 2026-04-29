@@ -2,6 +2,12 @@ export type RoomType = "queen" | "king" | "suite";
 
 export type ReservationStatus = "Confirmed" | "Checked In" | "Checked Out";
 
+export type PaymentStatus = "pending" | "pay_at_property" | "paid" | "failed" | "refunded";
+
+export type PaymentMode = "pay_at_property" | "online_placeholder" | "cash" | "card" | "upi" | "payment_link";
+
+export type PaymentProvider = "manual" | "razorpay" | "cashfree" | "stripe" | "google_pay";
+
 export type Room = {
   roomId: string;
   roomType: RoomType;
@@ -25,6 +31,11 @@ export type Reservation = {
   createdAt: string;
   checkedInAt?: string;
   checkedOutAt?: string;
+  paymentStatus?: PaymentStatus;
+  paymentMode?: PaymentMode;
+  paymentProvider?: PaymentProvider;
+  paymentReference?: string;
+  payAtProperty?: boolean;
 };
 
 export type SummaryCard = {
@@ -40,4 +51,3 @@ export type ToolResult = {
   card?: SummaryCard;
   data?: unknown;
 };
-

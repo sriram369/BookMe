@@ -38,6 +38,13 @@ type OpenRouterResponse = {
   };
 };
 
+type ChatProviderConfig = {
+  endpoint: string;
+  apiKey: string;
+  model: string;
+  headers: Record<string, string>;
+};
+
 export type AgentResult = {
   message: string;
   card?: SummaryCard;
@@ -192,6 +199,77 @@ function resultFromLatestTool(
   };
 }
 
+type AvailabilitySnapshot = {
+  roomId: string;
+  checkin: string;
+  checkout: string;
+};
+
+function availabilityFromToolResult(result: ToolResult): AvailabilitySnapshot | undefined {
+  if (!result.ok || typeof result.data !== "object" || result.data === null) return undefined;
+
+  const data = result.data as {
+    room?: { roomId?: unknown };
+    checkin?: unknown;
+    checkout?: unknown;
+  };
+  if (
+    typeof data.room?.roomId !== "string" ||
+    typeof data.checkin !== "string" ||
+    typeof data.checkout !== "string"
+  ) {
+    return undefined;
+  }
+
+  return {
+    roomId: data.room.roomId,
+    checkin: data.checkin,
+    checkout: data.checkout,
+  };
+}
+
+function bookingMatchesAvailability(rawArgs: unknown, availability: AvailabilitySnapshot | undefined) {
+  const args = typeof rawArgs === "object" && rawArgs !== null ? (rawArgs as Record<string, unknown>) : {};
+  return (
+    availability &&
+    String(args.room_id ?? "").toLowerCase() === availability.roomId.toLowerCase() &&
+    String(args.checkin ?? "") === availability.checkin &&
+    String(args.checkout ?? "") === availability.checkout
+  );
+}
+
+function getChatProviderConfig(): ChatProviderConfig | undefined {
+  const openAiKey = process.env.OPENAI_API_KEY?.trim();
+  if (openAiKey) {
+    return {
+      endpoint: "https://api.openai.com/v1/chat/completions",
+      apiKey: openAiKey,
+      model: process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini",
+      headers: {
+        Authorization: `Bearer ${openAiKey}`,
+        "Content-Type": "application/json",
+      },
+    };
+  }
+
+  const openRouterKey = process.env.OPENROUTER_API_KEY?.trim();
+  if (openRouterKey) {
+    return {
+      endpoint: "https://openrouter.ai/api/v1/chat/completions",
+      apiKey: openRouterKey,
+      model: process.env.OPENROUTER_MODEL?.trim() || "openrouter/free",
+      headers: {
+        Authorization: `Bearer ${openRouterKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+        "X-Title": "BookMe",
+      },
+    };
+  }
+
+  return undefined;
+}
+
 async function fallbackAgent(messages: ClientChatMessage[], hotel: HotelConfig): Promise<AgentResult> {
   const latest = messages[messages.length - 1]?.content ?? "";
   const lower = latest.toLowerCase();
@@ -252,10 +330,104 @@ async function fallbackAgent(messages: ClientChatMessage[], hotel: HotelConfig):
   };
 }
 
+function extractDateRange(text: string) {
+  const match = text.match(/(\d{4}-\d{2}-\d{2}).{0,40}?(\d{4}-\d{2}-\d{2})/);
+  if (!match) return undefined;
+  return { checkin: match[1], checkout: match[2] };
+}
+
+function extractRequestedRoomType(text: string) {
+  const lower = text.toLowerCase();
+  if (/(family|suite)/.test(lower)) return "suite";
+  if (/(executive|king)/.test(lower)) return "king";
+  if (/(deluxe|basic|standard|queen|ac)/.test(lower)) return "deluxe";
+  return undefined;
+}
+
+function extractGuestDetails(text: string) {
+  const email = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] ?? "";
+  const phone = text.match(/\+?\d[\d\s-]{7,}\d/)?.[0] ?? "";
+  const name =
+    text.match(/\bfor\s+([^,]+?)(?:,\s*phone|\s+phone|,\s*email|\s+email|$)/i)?.[1]?.trim() ??
+    text.match(/\bname\s+(?:is\s+)?([^,]+?)(?:,\s*phone|\s+phone|,\s*email|\s+email|$)/i)?.[1]?.trim() ??
+    "";
+
+  return { guestName: name, phone, email };
+}
+
+async function deterministicBookingAgent(messages: ClientChatMessage[]): Promise<AgentResult | undefined> {
+  const latest = messages[messages.length - 1]?.content ?? "";
+  const lower = latest.toLowerCase();
+  const transcript = messages.map((message) => message.content).join("\n");
+  const dates = extractDateRange(transcript);
+  const roomType = extractRequestedRoomType(transcript);
+
+  if (!dates || !roomType) return undefined;
+
+  const hasBookingIntent = /\b(book|booking|reserve|reservation|room|available|availability)\b/.test(lower);
+  const hasConfirmation = /\b(yes|confirm|confirmed|book it|reserve it|proceed)\b/.test(lower);
+
+  if (!hasBookingIntent && !hasConfirmation) return undefined;
+
+  const availability = await toolFromNameAsync("check_availability", {
+    checkin: dates.checkin,
+    checkout: dates.checkout,
+    room_type: roomType,
+  });
+
+  if (!availability.ok || !hasConfirmation) {
+    return {
+      message: availability.message,
+      card: availability.card,
+      toolCalls: ["check_availability"],
+    };
+  }
+
+  const details = extractGuestDetails(latest);
+  if (!details.guestName || (!details.phone && !details.email)) {
+    return {
+      message: "I can confirm this booking. Please send the guest name and either phone number or email.",
+      card: availability.card,
+      toolCalls: ["check_availability"],
+    };
+  }
+
+  const data = availability.data as { room?: { roomId?: string } } | undefined;
+  const roomId = data?.room?.roomId;
+  if (!roomId) {
+    return {
+      message: "I found availability, but could not read the room ID. Please try again.",
+      card: availability.card,
+      toolCalls: ["check_availability"],
+    };
+  }
+
+  const booking = await toolFromNameAsync("create_booking", {
+    guest_name: details.guestName,
+    phone: details.phone,
+    email: details.email,
+    room_id: roomId,
+    checkin: dates.checkin,
+    checkout: dates.checkout,
+    confirmed_by_guest: true,
+  });
+
+  return {
+    message: booking.message,
+    card: booking.card,
+    toolCalls: ["check_availability", "create_booking"],
+  };
+}
+
 export async function runBookMeAgent(messages: ClientChatMessage[], hotelSlug?: string): Promise<AgentResult> {
   const hotel = await getHotelConfig(hotelSlug);
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) {
+  const deterministic = await deterministicBookingAgent(messages);
+  if (deterministic) {
+    return deterministic;
+  }
+
+  const provider = getChatProviderConfig();
+  if (!provider) {
     return fallbackAgent(messages, hotel);
   }
 
@@ -265,23 +437,19 @@ export async function runBookMeAgent(messages: ClientChatMessage[], hotelSlug?: 
   ];
 
   let latestCard: SummaryCard | undefined;
+  let latestAvailability: AvailabilitySnapshot | undefined;
   const toolCalls: string[] = [];
   let model: string | undefined;
 
   for (let step = 0; step < 4; step++) {
     let response: Response;
     try {
-      response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      response = await fetch(provider.endpoint, {
         method: "POST",
         signal: openRouterTimeoutSignal(),
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
-          "X-Title": "BookMe",
-        },
+        headers: provider.headers,
         body: JSON.stringify({
-          model: process.env.OPENROUTER_MODEL ?? "openrouter/free",
+          model: provider.model,
           messages: requestMessages,
           tools,
           tool_choice: "auto",
@@ -327,8 +495,19 @@ export async function runBookMeAgent(messages: ClientChatMessage[], hotelSlug?: 
     });
 
     for (const call of calls) {
-      const result: ToolResult = await toolFromNameAsync(call.function.name, parseToolArgs(call.function.arguments));
+      const args = parseToolArgs(call.function.arguments);
+      const result: ToolResult =
+        call.function.name === "create_booking" && !bookingMatchesAvailability(args, latestAvailability)
+          ? {
+              ok: false,
+              message:
+                "Check availability again and create the booking only for the exact room and dates returned by that check.",
+            }
+          : await toolFromNameAsync(call.function.name, args);
       toolCalls.push(call.function.name);
+      if (call.function.name === "check_availability") {
+        latestAvailability = availabilityFromToolResult(result) ?? latestAvailability;
+      }
       latestCard = result.card ?? latestCard;
       requestMessages.push({
         role: "tool",

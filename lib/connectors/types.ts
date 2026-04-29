@@ -45,11 +45,22 @@ export type InventoryConnector = {
   upsertRoom(input: Room): Promise<Room>;
 };
 
+export type ConnectorSeedData = {
+  rooms: Room[];
+  reservations: Reservation[];
+};
+
+export type ConnectorSeedResetResult = {
+  roomsReset: number;
+  reservationsReset: number;
+};
+
 export type ConnectorBackend = {
   id: string;
   name: string;
   health(): Promise<ConnectorHealth>;
   initialize?(): Promise<ConnectorInitResult>;
+  resetSeedData?(data: ConnectorSeedData): Promise<ConnectorSeedResetResult>;
   reservations?: ReservationConnector;
   inventory?: InventoryConnector;
 };

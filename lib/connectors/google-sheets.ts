@@ -1,13 +1,27 @@
 import type { sheets_v4 } from "googleapis";
-import type { Reservation, ReservationStatus, Room, RoomType } from "@/lib/hotel/types";
-import type { ConnectorBackend, ConnectorHealth, ConnectorInitResult, ReservationCreateInput } from "./types";
+import type {
+  PaymentMode,
+  PaymentProvider,
+  PaymentStatus,
+  Reservation,
+  ReservationStatus,
+  Room,
+  RoomType,
+} from "@/lib/hotel/types";
+import type {
+  ConnectorBackend,
+  ConnectorHealth,
+  ConnectorInitResult,
+  ConnectorSeedData,
+  ReservationCreateInput,
+} from "./types";
 
 const connectorId = "google-sheets";
 const connectorName = "Google Sheets";
 
 export const expectedBookMeSheetNames = ["Reservations", "Inventory", "ID Log", "Audit Log"] as const;
 
-const reservationHeaders = [
+const reservationCoreHeaders = [
   "booking_id",
   "guest_name",
   "phone",
@@ -20,6 +34,16 @@ const reservationHeaders = [
   "checked_in_at",
   "checked_out_at",
 ] as const;
+
+const reservationPaymentHeaders = [
+  "payment_status",
+  "payment_mode",
+  "payment_provider",
+  "payment_reference",
+  "pay_at_property",
+] as const;
+
+const reservationHeaders = [...reservationCoreHeaders, ...reservationPaymentHeaders] as const;
 
 const inventoryHeaders = [
   "room_id",
@@ -143,13 +167,18 @@ function missingHeaders(actual: string[], expected: readonly string[]) {
   return expected.filter((header) => !actual.includes(header));
 }
 
+const parsePayAtProperty = (value: string | undefined) => {
+  if (!value) return true;
+  return !["false", "no", "0"].includes(value.toLowerCase());
+};
+
 async function ensureHeaders(client: GoogleSheetsClient) {
   const params: sheets_v4.Params$Resource$Spreadsheets$Values$Batchupdate = {
     spreadsheetId: client.spreadsheetId,
     requestBody: {
       valueInputOption: "RAW",
       data: [
-        { range: "Reservations!A1:K1", values: [Array.from(reservationHeaders)] },
+        { range: "Reservations!A1:P1", values: [Array.from(reservationHeaders)] },
         { range: "Inventory!A1:H1", values: [Array.from(inventoryHeaders)] },
       ],
     },
@@ -174,6 +203,11 @@ function rowToReservation(row: string[]): Reservation | undefined {
     createdAt: row[8] ?? new Date().toISOString(),
     checkedInAt: row[9] || undefined,
     checkedOutAt: row[10] || undefined,
+    paymentStatus: ((row[11] as PaymentStatus | undefined) ?? "pending"),
+    paymentMode: ((row[12] as PaymentMode | undefined) ?? "pay_at_property"),
+    paymentProvider: ((row[13] as PaymentProvider | undefined) ?? "manual"),
+    paymentReference: row[14] || undefined,
+    payAtProperty: parsePayAtProperty(row[15]),
   };
 }
 
@@ -190,6 +224,11 @@ function reservationToRow(reservation: Reservation) {
     reservation.createdAt,
     reservation.checkedInAt ?? "",
     reservation.checkedOutAt ?? "",
+    reservation.paymentStatus ?? "pending",
+    reservation.paymentMode ?? "pay_at_property",
+    reservation.paymentProvider ?? "manual",
+    reservation.paymentReference ?? "",
+    String(reservation.payAtProperty ?? true),
   ];
 }
 
@@ -225,7 +264,7 @@ function roomToRow(room: Room) {
 async function listReservationRows(client: GoogleSheetsClient) {
   const response = await client.sheets.spreadsheets.values.get({
     spreadsheetId: client.spreadsheetId,
-    range: "Reservations!A2:K",
+    range: "Reservations!A2:P",
   });
 
   return (response.data.values ?? []) as string[][];
@@ -238,6 +277,41 @@ async function listInventoryRows(client: GoogleSheetsClient) {
   });
 
   return (response.data.values ?? []) as string[][];
+}
+
+async function replaceSeedRows(client: GoogleSheetsClient, data: ConnectorSeedData) {
+  await ensureHeaders(client);
+  await client.sheets.spreadsheets.values.batchClear({
+    spreadsheetId: client.spreadsheetId,
+    requestBody: {
+      ranges: ["Reservations!A2:P", "Inventory!A2:H"],
+    },
+  });
+
+  const updateData: sheets_v4.Schema$ValueRange[] = [];
+  if (data.reservations.length) {
+    updateData.push({
+      range: `Reservations!A2:P${data.reservations.length + 1}`,
+      values: data.reservations.map(reservationToRow),
+    });
+  }
+
+  if (data.rooms.length) {
+    updateData.push({
+      range: `Inventory!A2:H${data.rooms.length + 1}`,
+      values: data.rooms.map(roomToRow),
+    });
+  }
+
+  if (updateData.length) {
+    await client.sheets.spreadsheets.values.batchUpdate({
+      spreadsheetId: client.spreadsheetId,
+      requestBody: {
+        valueInputOption: "RAW",
+        data: updateData,
+      },
+    });
+  }
 }
 
 async function nextBookingId(client: GoogleSheetsClient) {
@@ -264,12 +338,13 @@ export function createGoogleSheetsConnector(): ConnectorBackend {
         const { spreadsheetTitle, sheetTitles } = await getSheetTitles(client);
         const missingSheets = expectedBookMeSheetNames.filter((sheetName) => !sheetTitles.includes(sheetName));
         const reservationHeaderRow = sheetTitles.includes("Reservations")
-          ? await getHeaderRow(client, "Reservations!A1:K1")
+          ? await getHeaderRow(client, "Reservations!A1:P1")
           : [];
         const inventoryHeaderRow = sheetTitles.includes("Inventory")
           ? await getHeaderRow(client, "Inventory!A1:H1")
           : [];
-        const missingReservationHeaders = missingHeaders(reservationHeaderRow, reservationHeaders);
+        const missingReservationHeaders = missingHeaders(reservationHeaderRow, reservationCoreHeaders);
+        const missingReservationPaymentHeaders = missingHeaders(reservationHeaderRow, reservationPaymentHeaders);
         const missingInventoryHeaders = missingHeaders(inventoryHeaderRow, inventoryHeaders);
         const hasMissingHeaders = missingReservationHeaders.length > 0 || missingInventoryHeaders.length > 0;
 
@@ -287,6 +362,9 @@ export function createGoogleSheetsConnector(): ConnectorBackend {
             missingHeaders: {
               Reservations: missingReservationHeaders,
               Inventory: missingInventoryHeaders,
+            },
+            optionalMissingHeaders: {
+              Reservations: missingReservationPaymentHeaders,
             },
           },
         );
@@ -341,6 +419,18 @@ export function createGoogleSheetsConnector(): ConnectorBackend {
         };
       }
     },
+    async resetSeedData(data) {
+      const client = await createClient();
+      if ("status" in client) {
+        throw new Error(client.message);
+      }
+
+      await replaceSeedRows(client, data);
+      return {
+        roomsReset: data.rooms.length,
+        reservationsReset: data.reservations.length,
+      };
+    },
     reservations: {
       async listReservations() {
         const client = await createClient();
@@ -367,11 +457,16 @@ export function createGoogleSheetsConnector(): ConnectorBackend {
           createdAt: input.createdAt ?? new Date().toISOString(),
           checkedInAt: input.checkedInAt,
           checkedOutAt: input.checkedOutAt,
+          paymentStatus: input.paymentStatus ?? "pending",
+          paymentMode: input.paymentMode ?? "pay_at_property",
+          paymentProvider: input.paymentProvider ?? "manual",
+          paymentReference: input.paymentReference,
+          payAtProperty: input.payAtProperty ?? true,
         };
 
         await client.sheets.spreadsheets.values.append({
           spreadsheetId: client.spreadsheetId,
-          range: "Reservations!A:K",
+          range: "Reservations!A:P",
           valueInputOption: "RAW",
           insertDataOption: "INSERT_ROWS",
           requestBody: { values: [reservationToRow(reservation)] },
@@ -399,7 +494,7 @@ export function createGoogleSheetsConnector(): ConnectorBackend {
         const updated = { ...reservation, ...patch, status };
         await client.sheets.spreadsheets.values.update({
           spreadsheetId: client.spreadsheetId,
-          range: `Reservations!A${rowIndex + 2}:K${rowIndex + 2}`,
+          range: `Reservations!A${rowIndex + 2}:P${rowIndex + 2}`,
           valueInputOption: "RAW",
           requestBody: { values: [reservationToRow(updated)] },
         });

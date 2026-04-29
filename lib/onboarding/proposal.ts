@@ -24,6 +24,36 @@ function openRouterTimeoutSignal() {
   return AbortSignal.timeout(Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 15000);
 }
 
+function chatProviderConfig(): { endpoint: string; model: string; headers: Record<string, string> } | undefined {
+  const openAiKey = process.env.OPENAI_API_KEY?.trim();
+  if (openAiKey) {
+    return {
+      endpoint: "https://api.openai.com/v1/chat/completions",
+      model: process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini",
+      headers: {
+        Authorization: `Bearer ${openAiKey}`,
+        "Content-Type": "application/json",
+      },
+    };
+  }
+
+  const openRouterKey = process.env.OPENROUTER_API_KEY?.trim();
+  if (openRouterKey) {
+    return {
+      endpoint: "https://openrouter.ai/api/v1/chat/completions",
+      model: process.env.OPENROUTER_MODEL?.trim() || "openrouter/free",
+      headers: {
+        Authorization: `Bearer ${openRouterKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+        "X-Title": "BookMe",
+      },
+    };
+  }
+
+  return undefined;
+}
+
 function fallbackProposal(input: OwnerProposalInput): OwnerProposal {
   const needsManaged = /hotelogix|cloudbeds|ezee|booking|agoda|makemytrip/i.test(input.sourceSystem);
   const plan = needsManaged ? "Managed" : input.totalRooms >= 50 ? "Growth" : "Pilot";
@@ -47,24 +77,19 @@ function fallbackProposal(input: OwnerProposalInput): OwnerProposal {
 }
 
 export async function generateOwnerProposal(input: OwnerProposalInput): Promise<OwnerProposal> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) {
+  const provider = chatProviderConfig();
+  if (!provider) {
     return fallbackProposal(input);
   }
 
   let response: Response;
   try {
-    response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    response = await fetch(provider.endpoint, {
       method: "POST",
       signal: openRouterTimeoutSignal(),
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
-        "X-Title": "BookMe",
-      },
+      headers: provider.headers,
       body: JSON.stringify({
-        model: process.env.OPENROUTER_MODEL ?? "openrouter/free",
+        model: provider.model,
         temperature: 0.2,
         response_format: { type: "json_object" },
         messages: [

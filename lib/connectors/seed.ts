@@ -10,9 +10,12 @@ const isoDateFromToday = (offset: number) => {
 export type SeedGoogleSheetsResult = {
   ok: boolean;
   message: string;
+  mode: "seed" | "reset";
   roomsUpserted: number;
+  roomsReset: number;
   reservationsCreated: number;
   reservationsSkipped: number;
+  reservationsReset: number;
 };
 
 const demoRooms: Room[] = [
@@ -72,6 +75,8 @@ function demoReservations(): Reservation[] {
   const today = isoDateFromToday(0);
   const tomorrow = isoDateFromToday(1);
   const dayAfterTomorrow = isoDateFromToday(2);
+  const createdAt = `${today}T00:00:00.000Z`;
+  const checkedInAt = `${today}T09:00:00.000Z`;
 
   return [
     {
@@ -83,7 +88,11 @@ function demoReservations(): Reservation[] {
       checkin: today,
       checkout: tomorrow,
       status: "Confirmed",
-      createdAt: new Date().toISOString(),
+      createdAt,
+      paymentStatus: "pending",
+      paymentMode: "pay_at_property",
+      paymentProvider: "manual",
+      payAtProperty: true,
     },
     {
       bookingId: "BKM-2002",
@@ -94,32 +103,60 @@ function demoReservations(): Reservation[] {
       checkin: today,
       checkout: dayAfterTomorrow,
       status: "Checked In",
-      createdAt: new Date().toISOString(),
-      checkedInAt: new Date().toISOString(),
+      createdAt,
+      checkedInAt,
+      paymentStatus: "pending",
+      paymentMode: "pay_at_property",
+      paymentProvider: "manual",
+      payAtProperty: true,
     },
   ];
 }
 
-export async function seedGoogleSheetsDemo(): Promise<SeedGoogleSheetsResult> {
+function unavailableResult(message: string, mode: SeedGoogleSheetsResult["mode"]): SeedGoogleSheetsResult {
+  return {
+    ok: false,
+    message,
+    mode,
+    roomsUpserted: 0,
+    roomsReset: 0,
+    reservationsCreated: 0,
+    reservationsSkipped: 0,
+    reservationsReset: 0,
+  };
+}
+
+export async function seedGoogleSheetsDemo(options: { reset?: boolean } = {}): Promise<SeedGoogleSheetsResult> {
+  const mode = options.reset ? "reset" : "seed";
   const connector = getConnectorBackend("google-sheets");
   if (!connector?.inventory || !connector.reservations) {
-    return {
-      ok: false,
-      message: "Google Sheets connector is unavailable.",
-      roomsUpserted: 0,
-      reservationsCreated: 0,
-      reservationsSkipped: 0,
-    };
+    return unavailableResult("Google Sheets connector is unavailable.", mode);
   }
 
   const health = await connector.health();
   if (health.status !== "ok") {
+    return unavailableResult(health.message, mode);
+  }
+
+  if (options.reset) {
+    if (!connector.resetSeedData) {
+      return unavailableResult("Google Sheets connector does not support demo data reset.", mode);
+    }
+
+    const reset = await connector.resetSeedData({
+      rooms: demoRooms,
+      reservations: demoReservations(),
+    });
+
     return {
-      ok: false,
-      message: health.message,
+      ok: true,
+      message: "Google Sheets demo data was reset.",
+      mode,
       roomsUpserted: 0,
+      roomsReset: reset.roomsReset,
       reservationsCreated: 0,
       reservationsSkipped: 0,
+      reservationsReset: reset.reservationsReset,
     };
   }
 
@@ -143,8 +180,11 @@ export async function seedGoogleSheetsDemo(): Promise<SeedGoogleSheetsResult> {
   return {
     ok: true,
     message: "Google Sheets demo data is ready.",
+    mode,
     roomsUpserted: demoRooms.length,
+    roomsReset: 0,
     reservationsCreated,
     reservationsSkipped,
+    reservationsReset: 0,
   };
 }
