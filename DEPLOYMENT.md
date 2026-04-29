@@ -25,8 +25,8 @@ Required env vars:
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=
-SUPABASE_SERVICE_ROLE_KEY=
-SUPABASE_ANON_KEY=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+SUPABASE_SECRET_KEY=
 ```
 
 The app uses the service-role key only on the server. Do not expose it in client code.

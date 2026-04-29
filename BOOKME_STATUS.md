@@ -152,7 +152,8 @@ These cannot be completed purely in code without the actual accounts and secrets
 2. Run `supabase/schema.sql`.
 3. Add Supabase env vars:
    - `NEXT_PUBLIC_SUPABASE_URL`
-   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+   - `SUPABASE_SECRET_KEY`
 4. Create Google OAuth app.
 5. Add OAuth env vars:
    - `NEXTAUTH_URL`

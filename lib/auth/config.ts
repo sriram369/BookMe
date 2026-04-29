@@ -97,7 +97,7 @@ export function getAuthSecret() {
 
 export function getSupabaseConfig() {
   const url = process.env.SUPABASE_URL?.trim() || process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  const serviceRoleKey = process.env.SUPABASE_SECRET_KEY?.trim() || process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
 
   if (!url || !serviceRoleKey) {
     return null;
@@ -114,7 +114,7 @@ export function getConfigStatus(): ConfigStatus {
   const oauthConfigured = providers.google || providers.github;
   const supabaseMissing = [
     ...(hasEnv("SUPABASE_URL") || hasEnv("NEXT_PUBLIC_SUPABASE_URL") ? [] : ["NEXT_PUBLIC_SUPABASE_URL"]),
-    ...missingEnv(["SUPABASE_SERVICE_ROLE_KEY"]),
+    ...(hasEnv("SUPABASE_SECRET_KEY") || hasEnv("SUPABASE_SERVICE_ROLE_KEY") ? [] : ["SUPABASE_SECRET_KEY"]),
   ];
   const sheetsMissing = missingEnv([
     "GOOGLE_SHEETS_SERVICE_ACCOUNT_EMAIL",

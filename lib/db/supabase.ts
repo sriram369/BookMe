@@ -26,7 +26,7 @@ function cleanSupabaseUrl(value: string | undefined) {
 
 export function getSupabaseServerConfig(env: NodeJS.ProcessEnv = process.env): SupabaseServerConfig | null {
   const url = cleanSupabaseUrl(env.SUPABASE_URL ?? env.NEXT_PUBLIC_SUPABASE_URL);
-  const serviceRoleKey = cleanEnvValue(env.SUPABASE_SERVICE_ROLE_KEY);
+  const serviceRoleKey = cleanEnvValue(env.SUPABASE_SECRET_KEY ?? env.SUPABASE_SERVICE_ROLE_KEY);
 
   if (!url || !serviceRoleKey) {
     return null;
