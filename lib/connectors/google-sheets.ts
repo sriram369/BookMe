@@ -415,6 +415,22 @@ export function createGoogleSheetsConnector(): ConnectorBackend {
         const rows = await listInventoryRows(client);
         return rows.map(rowToRoom).filter((room): room is Room => Boolean(room));
       },
+      async createRoom(input) {
+        const client = await createClient();
+        if ("status" in client) {
+          throw new Error(client.message);
+        }
+
+        await client.sheets.spreadsheets.values.append({
+          spreadsheetId: client.spreadsheetId,
+          range: "Inventory!A:H",
+          valueInputOption: "RAW",
+          insertDataOption: "INSERT_ROWS",
+          requestBody: { values: [roomToRow(input)] },
+        });
+
+        return input;
+      },
       async updateRoom(roomId, patch) {
         const client = await createClient();
         if ("status" in client) {
@@ -441,6 +457,34 @@ export function createGoogleSheetsConnector(): ConnectorBackend {
         });
 
         return updated;
+      },
+      async upsertRoom(input) {
+        const client = await createClient();
+        if ("status" in client) {
+          throw new Error(client.message);
+        }
+
+        const rows = await listInventoryRows(client);
+        const rowIndex = rows.findIndex((row) => row[0]?.toLowerCase() === input.roomId.toLowerCase());
+        if (rowIndex < 0) {
+          await client.sheets.spreadsheets.values.append({
+            spreadsheetId: client.spreadsheetId,
+            range: "Inventory!A:H",
+            valueInputOption: "RAW",
+            insertDataOption: "INSERT_ROWS",
+            requestBody: { values: [roomToRow(input)] },
+          });
+          return input;
+        }
+
+        await client.sheets.spreadsheets.values.update({
+          spreadsheetId: client.spreadsheetId,
+          range: `Inventory!A${rowIndex + 2}:H${rowIndex + 2}`,
+          valueInputOption: "RAW",
+          requestBody: { values: [roomToRow(input)] },
+        });
+
+        return input;
       },
     },
   };

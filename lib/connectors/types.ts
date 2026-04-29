@@ -40,7 +40,9 @@ export type ReservationConnector = {
 
 export type InventoryConnector = {
   listRooms(): Promise<Room[]>;
+  createRoom(input: Room): Promise<Room>;
   updateRoom(roomId: string, patch: Partial<Room>): Promise<Room>;
+  upsertRoom(input: Room): Promise<Room>;
 };
 
 export type ConnectorBackend = {

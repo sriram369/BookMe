@@ -65,6 +65,8 @@ Rules:
 - Never invent room numbers, prices, availability, totals, booking IDs, or statuses.
 - Use tools for all reservation lookup, availability, booking creation, check-in, and checkout actions.
 - For booking, call check_availability before create_booking.
+- If the guest asks for a room category, use the matching category: deluxe/basic/standard maps to queen, executive/king maps to king, family/suite maps to suite.
+- Never create a booking for a different room category than the guest requested or than you just quoted.
 - Do not call create_booking unless the guest explicitly confirms.
 - If information is missing, ask one concise follow-up question.
 - Cancellations, refunds, payments, complaints, corporate rates, KYC disputes, and accessibility accommodations require human staff.
@@ -101,8 +103,8 @@ const tools = [
           checkout: { type: "string", description: "Check-out date in YYYY-MM-DD format." },
           room_type: {
             type: "string",
-            enum: ["queen", "king", "suite", "basic"],
-            description: "Requested room type.",
+            enum: ["queen", "king", "suite", "basic", "deluxe", "standard", "executive", "family"],
+            description: "Requested room type or hotel category. Use deluxe/basic/standard for queen-style rooms, executive/king for king rooms, family/suite for suites.",
           },
         },
         required: ["checkin", "checkout"],
@@ -173,6 +175,21 @@ function parseToolArgs(value: string) {
 function openRouterTimeoutSignal() {
   const timeoutMs = Number(process.env.OPENROUTER_TIMEOUT_MS ?? 15000);
   return AbortSignal.timeout(Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 15000);
+}
+
+function resultFromLatestTool(
+  latestCard: SummaryCard | undefined,
+  toolCalls: string[],
+  model: string | undefined,
+): AgentResult | undefined {
+  if (!latestCard || toolCalls.length === 0) return undefined;
+
+  return {
+    message: `${latestCard.title}: ${latestCard.status}.`,
+    card: latestCard,
+    model,
+    toolCalls,
+  };
 }
 
 async function fallbackAgent(messages: ClientChatMessage[], hotel: HotelConfig): Promise<AgentResult> {
@@ -272,18 +289,24 @@ export async function runBookMeAgent(messages: ClientChatMessage[], hotelSlug?: 
         }),
       });
     } catch {
-      return fallbackAgent(messages, hotel);
+      return resultFromLatestTool(latestCard, toolCalls, model) ?? fallbackAgent(messages, hotel);
     }
 
-    const data = (await response.json()) as OpenRouterResponse;
+    let data: OpenRouterResponse;
+    try {
+      data = (await response.json()) as OpenRouterResponse;
+    } catch {
+      return resultFromLatestTool(latestCard, toolCalls, model) ?? fallbackAgent(messages, hotel);
+    }
+
     if (!response.ok || data.error) {
-      return fallbackAgent(messages, hotel);
+      return resultFromLatestTool(latestCard, toolCalls, model) ?? fallbackAgent(messages, hotel);
     }
 
     model = data.model;
     const assistant = data.choices?.[0]?.message;
     if (!assistant) {
-      return fallbackAgent(messages, hotel);
+      return resultFromLatestTool(latestCard, toolCalls, model) ?? fallbackAgent(messages, hotel);
     }
 
     const calls = assistant.tool_calls ?? [];

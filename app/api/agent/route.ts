@@ -16,7 +16,8 @@ export async function POST(request: Request) {
 
     const result = await runBookMeAgent(input.value.messages, input.value.hotelSlug);
     return NextResponse.json(result);
-  } catch {
+  } catch (error) {
+    console.warn(error);
     return NextResponse.json(
       {
         message: "The front desk is having trouble right now. Please try again in a moment.",

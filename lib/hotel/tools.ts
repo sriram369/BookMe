@@ -23,9 +23,17 @@ const normalizeIdentifier = (identifier: string) =>
 const normalizeRoomType = (roomType?: string): RoomType | undefined => {
   const normalized = roomType?.toLowerCase();
   if (!normalized) return undefined;
-  if (normalized.includes("suite")) return "suite";
-  if (normalized.includes("king")) return "king";
-  if (normalized.includes("queen") || normalized.includes("basic")) return "queen";
+  if (normalized.includes("suite") || normalized.includes("family")) return "suite";
+  if (normalized.includes("king") || normalized.includes("executive")) return "king";
+  if (
+    normalized.includes("queen") ||
+    normalized.includes("basic") ||
+    normalized.includes("deluxe") ||
+    normalized.includes("standard") ||
+    normalized.includes("ac")
+  ) {
+    return "queen";
+  }
   return undefined;
 };
 
@@ -157,6 +165,7 @@ export function checkAvailability(checkin: string, checkout: string, roomType?: 
     (room) => room.isActive && (!normalizedRoomType || room.roomType === normalizedRoomType),
   );
   const availableRooms = rooms.filter((room) => !activeReservationForRoom(room.roomId, checkin, checkout));
+  availableRooms.sort((a, b) => a.pricePerNight - b.pricePerNight || a.roomId.localeCompare(b.roomId));
 
   if (availableRooms.length === 0) {
     return {
@@ -597,6 +606,7 @@ async function checkAvailabilityConnected(
   );
   const reservations = await connector.reservations.listReservations();
   const availableRooms = rooms.filter((room) => !activeReservationForRoomFrom(reservations, room.roomId, checkin, checkout));
+  availableRooms.sort((a, b) => a.pricePerNight - b.pricePerNight || a.roomId.localeCompare(b.roomId));
 
   if (availableRooms.length === 0) {
     return {

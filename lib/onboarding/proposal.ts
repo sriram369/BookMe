@@ -88,9 +88,16 @@ export async function generateOwnerProposal(input: OwnerProposalInput): Promise<
     return fallbackProposal(input);
   }
 
-  const data = (await response.json()) as {
+  let data: {
     choices?: Array<{ message?: { content?: string | null } }>;
   };
+  try {
+    data = (await response.json()) as {
+      choices?: Array<{ message?: { content?: string | null } }>;
+    };
+  } catch {
+    return fallbackProposal(input);
+  }
 
   try {
     const parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}") as Partial<OwnerProposal>;
