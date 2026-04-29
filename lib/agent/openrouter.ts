@@ -170,6 +170,11 @@ function parseToolArgs(value: string) {
   }
 }
 
+function openRouterTimeoutSignal() {
+  const timeoutMs = Number(process.env.OPENROUTER_TIMEOUT_MS ?? 15000);
+  return AbortSignal.timeout(Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 15000);
+}
+
 async function fallbackAgent(messages: ClientChatMessage[], hotel: HotelConfig): Promise<AgentResult> {
   const latest = messages[messages.length - 1]?.content ?? "";
   const lower = latest.toLowerCase();
@@ -247,22 +252,28 @@ export async function runBookMeAgent(messages: ClientChatMessage[], hotelSlug?: 
   let model: string | undefined;
 
   for (let step = 0; step < 4; step++) {
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
-        "X-Title": "BookMe",
-      },
-      body: JSON.stringify({
-        model: process.env.OPENROUTER_MODEL ?? "openrouter/free",
-        messages: requestMessages,
-        tools,
-        tool_choice: "auto",
-        temperature: 0.2,
-      }),
-    });
+    let response: Response;
+    try {
+      response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        signal: openRouterTimeoutSignal(),
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+          "X-Title": "BookMe",
+        },
+        body: JSON.stringify({
+          model: process.env.OPENROUTER_MODEL ?? "openrouter/free",
+          messages: requestMessages,
+          tools,
+          tool_choice: "auto",
+          temperature: 0.2,
+        }),
+      });
+    } catch {
+      return fallbackAgent(messages, hotel);
+    }
 
     const data = (await response.json()) as OpenRouterResponse;
     if (!response.ok || data.error) {

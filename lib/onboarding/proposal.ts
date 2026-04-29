@@ -19,6 +19,11 @@ export type OwnerProposal = {
   risks: string[];
 };
 
+function openRouterTimeoutSignal() {
+  const timeoutMs = Number(process.env.OPENROUTER_TIMEOUT_MS ?? 15000);
+  return AbortSignal.timeout(Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 15000);
+}
+
 function fallbackProposal(input: OwnerProposalInput): OwnerProposal {
   const needsManaged = /hotelogix|cloudbeds|ezee|booking|agoda|makemytrip/i.test(input.sourceSystem);
   const plan = needsManaged ? "Managed" : input.totalRooms >= 50 ? "Growth" : "Pilot";
@@ -47,31 +52,37 @@ export async function generateOwnerProposal(input: OwnerProposalInput): Promise<
     return fallbackProposal(input);
   }
 
-  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
-      "X-Title": "BookMe",
-    },
-    body: JSON.stringify({
-      model: process.env.OPENROUTER_MODEL ?? "openrouter/free",
-      temperature: 0.2,
-      response_format: { type: "json_object" },
-      messages: [
-        {
-          role: "system",
-          content:
-            "You price and scope BookMe for mid-market hotels in India. Return only compact JSON with recommendedPlan, monthlyPrice, setupFee, summary, rollout array, and risks array. Be practical and do not claim integrations are live unless the source system is Google Sheets.",
-        },
-        {
-          role: "user",
-          content: JSON.stringify(input),
-        },
-      ],
-    }),
-  });
+  let response: Response;
+  try {
+    response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      signal: openRouterTimeoutSignal(),
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+        "X-Title": "BookMe",
+      },
+      body: JSON.stringify({
+        model: process.env.OPENROUTER_MODEL ?? "openrouter/free",
+        temperature: 0.2,
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content:
+              "You price and scope BookMe for mid-market hotels in India. Return only compact JSON with recommendedPlan, monthlyPrice, setupFee, summary, rollout array, and risks array. Be practical and do not claim integrations are live unless the source system is Google Sheets.",
+          },
+          {
+            role: "user",
+            content: JSON.stringify(input),
+          },
+        ],
+      }),
+    });
+  } catch {
+    return fallbackProposal(input);
+  }
 
   if (!response.ok) {
     return fallbackProposal(input);
