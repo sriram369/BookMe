@@ -31,8 +31,29 @@ create table if not exists public.bookme_hotels (
   constraint bookme_hotels_proposal_object check (proposal is null or jsonb_typeof(proposal) = 'object')
 );
 
+create table if not exists public.bookme_audit_events (
+  id uuid primary key default gen_random_uuid(),
+  hotel_slug text,
+  actor_type text not null default 'system',
+  actor_id text,
+  event_type text not null,
+  workflow text,
+  tool_name text,
+  booking_id text,
+  status text not null default 'ok',
+  message text,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  constraint bookme_audit_events_event_type_not_blank check (length(btrim(event_type)) > 0),
+  constraint bookme_audit_events_status_not_blank check (length(btrim(status)) > 0),
+  constraint bookme_audit_events_metadata_object check (jsonb_typeof(metadata) = 'object')
+);
+
 create index if not exists bookme_hotels_created_at_idx on public.bookme_hotels (created_at desc);
 create index if not exists bookme_users_created_at_idx on public.bookme_users (created_at desc);
+create index if not exists bookme_audit_events_hotel_created_at_idx on public.bookme_audit_events (hotel_slug, created_at desc);
+create index if not exists bookme_audit_events_booking_id_idx on public.bookme_audit_events (booking_id);
+create index if not exists bookme_audit_events_event_type_idx on public.bookme_audit_events (event_type);
 
 create or replace function public.set_bookme_updated_at()
 returns trigger
@@ -58,3 +79,4 @@ execute function public.set_bookme_updated_at();
 
 alter table public.bookme_users enable row level security;
 alter table public.bookme_hotels enable row level security;
+alter table public.bookme_audit_events enable row level security;

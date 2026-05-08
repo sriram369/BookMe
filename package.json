@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "eval": "node eval/run-eval.mjs",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"

@@ -1,6 +1,7 @@
 import type { SummaryCard, ToolResult } from "@/lib/hotel/types";
 import { toolFromNameAsync } from "@/lib/hotel/tools";
 import { getHotelConfig, type HotelConfig } from "@/lib/hotel/config-store";
+import { auditBookMeEvent } from "@/lib/observability/audit";
 
 export type ClientChatMessage = {
   role: "user" | "assistant";
@@ -197,6 +198,10 @@ function resultFromLatestTool(
     model,
     toolCalls,
   };
+}
+
+function isTerminalWorkflowTool(name: string) {
+  return name === "create_booking" || name === "checkin_guest" || name === "checkout_guest";
 }
 
 type AvailabilitySnapshot = {
@@ -419,10 +424,53 @@ async function deterministicBookingAgent(messages: ClientChatMessage[]): Promise
   };
 }
 
+function shouldUseDeterministicStayService(messages: ClientChatMessage[]) {
+  const latest = messages[messages.length - 1]?.content.toLowerCase() ?? "";
+  return (
+    lowerIncludesAny(latest, ["check in", "checking in", "check out", "checkout"]) &&
+    /\bbkm-\d{4,}\b/i.test(latest)
+  );
+}
+
+function lowerIncludesAny(value: string, needles: string[]) {
+  return needles.some((needle) => value.includes(needle));
+}
+
 export async function runBookMeAgent(messages: ClientChatMessage[], hotelSlug?: string): Promise<AgentResult> {
   const hotel = await getHotelConfig(hotelSlug);
+  if (shouldUseDeterministicStayService(messages)) {
+    const result = await fallbackAgent(messages, hotel);
+    await auditBookMeEvent({
+      hotelSlug: hotel.slug,
+      actorType: "guest",
+      eventType: "agent.workflow.completed",
+      workflow: "stay_service",
+      toolName: result.toolCalls.at(-1) ?? null,
+      status: result.card ? "ok" : "blocked",
+      message: result.message,
+      metadata: {
+        toolCalls: result.toolCalls,
+        mode: "deterministic",
+      },
+    });
+    return result;
+  }
+
   const deterministic = await deterministicBookingAgent(messages);
   if (deterministic) {
+    await auditBookMeEvent({
+      hotelSlug: hotel.slug,
+      actorType: "guest",
+      eventType: "agent.workflow.completed",
+      workflow: "booking",
+      toolName: deterministic.toolCalls.at(-1) ?? null,
+      status: deterministic.card ? "ok" : "blocked",
+      message: deterministic.message,
+      metadata: {
+        toolCalls: deterministic.toolCalls,
+        mode: "deterministic",
+      },
+    });
     return deterministic;
   }
 
@@ -509,6 +557,29 @@ export async function runBookMeAgent(messages: ClientChatMessage[], hotelSlug?: 
         latestAvailability = availabilityFromToolResult(result) ?? latestAvailability;
       }
       latestCard = result.card ?? latestCard;
+
+      if (result.ok && result.card && isTerminalWorkflowTool(call.function.name)) {
+        await auditBookMeEvent({
+          hotelSlug: hotel.slug,
+          actorType: "guest",
+          eventType: "agent.workflow.completed",
+          workflow: call.function.name,
+          toolName: call.function.name,
+          status: "ok",
+          message: result.message,
+          metadata: {
+            toolCalls,
+            mode: "llm_tool_call",
+          },
+        });
+        return {
+          message: result.message,
+          card: result.card,
+          model,
+          toolCalls,
+        };
+      }
+
       requestMessages.push({
         role: "tool",
         tool_call_id: call.id,

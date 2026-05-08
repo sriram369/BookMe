@@ -32,6 +32,19 @@ export type BookMeDbHotel = {
   updatedAt: string;
 };
 
+export type BookMeAuditEventInput = {
+  hotelSlug?: string | null;
+  actorType?: "guest" | "staff" | "system" | "agent";
+  actorId?: string | null;
+  eventType: string;
+  workflow?: string | null;
+  toolName?: string | null;
+  bookingId?: string | null;
+  status?: "ok" | "error" | "blocked";
+  message?: string | null;
+  metadata?: Record<string, unknown>;
+};
+
 type BookMeUserRow = {
   email: string;
   name: string | null;
@@ -39,6 +52,21 @@ type BookMeUserRow = {
   provider: string | null;
   created_at: string;
   updated_at: string;
+};
+
+type BookMeAuditEventRow = {
+  id: string;
+  hotel_slug: string | null;
+  actor_type: string;
+  actor_id: string | null;
+  event_type: string;
+  workflow: string | null;
+  tool_name: string | null;
+  booking_id: string | null;
+  status: string;
+  message: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
 };
 
 type BookMeHotelRow = {
@@ -165,4 +193,28 @@ export async function upsertBookMeHotelToSupabase(
   });
 
   return rows?.[0] ? hotelFromRow(rows[0]) : null;
+}
+
+export async function recordBookMeAuditEvent(input: BookMeAuditEventInput) {
+  const eventType = input.eventType.trim();
+  if (!eventType) return null;
+
+  const rows = await supabaseRest<BookMeAuditEventRow[]>("bookme_audit_events", {
+    method: "POST",
+    prefer: "return=representation",
+    body: {
+      hotel_slug: input.hotelSlug ?? null,
+      actor_type: input.actorType ?? "system",
+      actor_id: input.actorId ?? null,
+      event_type: eventType,
+      workflow: input.workflow ?? null,
+      tool_name: input.toolName ?? null,
+      booking_id: input.bookingId ?? null,
+      status: input.status ?? "ok",
+      message: input.message ?? null,
+      metadata: input.metadata ?? {},
+    },
+  });
+
+  return rows?.[0] ?? null;
 }
