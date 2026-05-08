@@ -1,7 +1,7 @@
 import type { Reservation, Room, RoomType, SummaryCard, ToolResult } from "./types";
 import { getStore } from "./store";
 import type { HotelConfig } from "./config-store";
-import { getConnectorBackend, type ConnectorBackend } from "@/lib/connectors";
+import { getConnectorBackend, listConnectorBackends, type ConnectorBackend } from "@/lib/connectors";
 
 const dollars = (amount: number) =>
   new Intl.NumberFormat("en-US", {
@@ -35,6 +35,23 @@ const paymentModeLabel = (reservation: Reservation) => titleFromSnake(reservatio
 
 const normalizeIdentifier = (identifier: string) =>
   identifier.trim().toLowerCase().replace(/[()\-\s.]/g, "");
+
+const bookingIdempotencyKey = (args: {
+  guestName: string;
+  phone: string;
+  email: string;
+  roomId: string;
+  checkin: string;
+  checkout: string;
+}) =>
+  [
+    args.guestName.trim().toLowerCase(),
+    normalizeIdentifier(args.phone),
+    args.email.trim().toLowerCase(),
+    args.roomId.trim().toLowerCase(),
+    args.checkin,
+    args.checkout,
+  ].join("|");
 
 const normalizeRoomType = (roomType?: string): RoomType | undefined => {
   const normalized = roomType?.toLowerCase();
@@ -249,6 +266,7 @@ export function createBooking(args: {
 
   const reservation: Reservation = {
     bookingId: `BKM-${store.nextBookingNumber++}`,
+    idempotencyKey: bookingIdempotencyKey(args),
     guestName: args.guestName,
     phone: normalizeIdentifier(args.phone),
     email: args.email.toLowerCase(),
@@ -551,11 +569,18 @@ export function toolFromName(name: string, rawArgs: unknown): ToolResult {
 }
 
 async function activeConnector(): Promise<ConnectorBackend | undefined> {
-  const connector = getConnectorBackend("google-sheets");
-  if (!connector?.reservations || !connector.inventory) return undefined;
+  const preferredConnectorId = process.env.BOOKME_CONNECTOR_ID?.trim();
+  const connectors = preferredConnectorId
+    ? [getConnectorBackend(preferredConnectorId)].filter((connector): connector is ConnectorBackend => Boolean(connector))
+    : listConnectorBackends();
 
-  const status = await connector.health();
-  return status.status === "ok" ? connector : undefined;
+  for (const connector of connectors) {
+    if (!connector.reservations || !connector.inventory) continue;
+    const status = await connector.health();
+    if (status.status === "ok") return connector;
+  }
+
+  return undefined;
 }
 
 async function lookupGuestConnected(connector: ConnectorBackend, identifier: string): Promise<ToolResult> {
@@ -683,6 +708,28 @@ async function createBookingConnected(
   }
 
   const reservations = await connector.reservations.listReservations();
+  const idempotencyKey = bookingIdempotencyKey(args);
+  const existing = reservations.find(
+    (reservation) =>
+      reservation.idempotencyKey === idempotencyKey ||
+      (reservation.status !== "Checked Out" &&
+        reservation.roomId === args.roomId &&
+        reservation.checkin === args.checkin &&
+        reservation.checkout === args.checkout &&
+        reservation.guestName.trim().toLowerCase() === args.guestName.trim().toLowerCase() &&
+        (normalizeIdentifier(reservation.phone) === normalizeIdentifier(args.phone) ||
+          reservation.email.toLowerCase() === args.email.toLowerCase())),
+  );
+  if (existing) {
+    const room = (await connector.inventory.listRooms()).find((candidate) => candidate.roomId === existing.roomId);
+    return {
+      ok: true,
+      message: `Booking already exists for ${existing.guestName}. Confirmation number: ${existing.bookingId}.`,
+      card: reservationCardWithRoom(existing, room, "Reservation confirmed", "booking", rupees),
+      data: existing,
+    };
+  }
+
   if (activeReservationForRoomFrom(reservations, args.roomId, args.checkin, args.checkout)) {
     return { ok: false, message: "That room was just taken. Please check availability again and offer another room." };
   }
@@ -694,6 +741,7 @@ async function createBookingConnected(
 
   const reservation = await connector.reservations.createReservation({
     guestName: args.guestName,
+    idempotencyKey,
     phone: normalizeIdentifier(args.phone),
     email: args.email.toLowerCase(),
     roomId: args.roomId,

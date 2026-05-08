@@ -26,6 +26,7 @@ export type ConnectorInitResult = ConnectorHealth & {
 export type ReservationCreateInput = Omit<Reservation, "bookingId" | "createdAt"> & {
   bookingId?: string;
   createdAt?: string;
+  idempotencyKey?: string;
 };
 
 export type ReservationConnector = {

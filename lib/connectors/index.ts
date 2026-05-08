@@ -1,8 +1,9 @@
 import { createGoogleSheetsConnector } from "./google-sheets";
+import { createSupabaseConnector } from "./supabase";
 import type { ConnectorBackend } from "./types";
 
 export function listConnectorBackends(): ConnectorBackend[] {
-  return [createGoogleSheetsConnector()];
+  return [createSupabaseConnector(), createGoogleSheetsConnector()];
 }
 
 export function getConnectorBackend(connectorId: string): ConnectorBackend | undefined {
@@ -15,6 +16,6 @@ export type {
   ConnectorHealthStatus,
   ConnectorInitResult,
   InventoryConnector,
-  ReservationConnector,
   ReservationCreateInput,
+  ReservationConnector,
 } from "./types";

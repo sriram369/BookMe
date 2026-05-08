@@ -307,6 +307,12 @@ npm run typecheck
 npm run build
 ```
 
+Optional browser smoke check:
+
+```bash
+npm run smoke
+```
+
 ### Run Evaluation Smoke Test
 
 In one terminal, start the app:

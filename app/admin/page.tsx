@@ -22,6 +22,7 @@ import { SiteHeader } from "@/components/site-header";
 import { authOptions } from "@/lib/auth/options";
 import { getBookMeAuthMode } from "@/lib/auth/config";
 import { requireHotelAdminAccess } from "@/lib/auth/hotel-access";
+import { AdminReservationsPanel } from "@/components/admin-reservations-panel";
 import { adminDashboardDataAsync } from "@/lib/hotel/tools";
 import { findHotelConfig, getHotelConfig } from "@/lib/hotel/config-store";
 import { listConnectorBackends } from "@/lib/connectors";
@@ -364,55 +365,7 @@ export default async function AdminPage({
               )}
             </section>
 
-            <section id="reservations" className="liquid-glass overflow-hidden rounded-[1.5rem]">
-              <div className="flex flex-col justify-between gap-3 border-b border-white/10 px-5 py-4 sm:flex-row sm:items-center">
-                <div className="flex items-center gap-3">
-                  <ClipboardList className="h-5 w-5" />
-                  <div>
-                    <h2 className="text-sm font-medium text-white">Reservations</h2>
-                    <p className="text-xs text-white/[0.5]">Guest state written by BookMe tools</p>
-                  </div>
-                </div>
-                <span className="text-xs text-white/[0.55]">{dashboard.hotel.dataSource}</span>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[900px] text-left text-sm">
-                  <thead className="border-b border-white/10 text-xs uppercase tracking-[0.16em] text-white/[0.42]">
-                    <tr>
-                      <th className="px-5 py-3 font-medium">Booking</th>
-                      <th className="px-5 py-3 font-medium">Guest</th>
-                      <th className="px-5 py-3 font-medium">Room</th>
-                      <th className="px-5 py-3 font-medium">Dates</th>
-                      <th className="px-5 py-3 font-medium">Status</th>
-                      <th className="px-5 py-3 font-medium">Payment</th>
-                      <th className="px-5 py-3 font-medium">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/10">
-                    {dashboard.reservations.map((reservation) => (
-                      <tr key={reservation.bookingId}>
-                        <td className="px-5 py-4 font-medium text-white">{reservation.bookingId}</td>
-                        <td className="px-5 py-4">
-                          <p className="font-medium text-white">{reservation.guestName}</p>
-                          <p className="text-xs text-white/[0.45]">{reservation.contact}</p>
-                        </td>
-                        <td className="px-5 py-4 text-white/[0.64]">{reservation.room}</td>
-                        <td className="px-5 py-4 text-white/[0.64]">{reservation.dates}</td>
-                        <td className="px-5 py-4">
-                          <StatusPill status={reservation.status} />
-                        </td>
-                        <td className="px-5 py-4">
-                          <p className="font-medium text-white">{reservation.paymentStatus}</p>
-                          <p className="text-xs text-white/[0.45]">{reservation.paymentMode}</p>
-                        </td>
-                        <td className="px-5 py-4 text-white">{reservation.total}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
+            <AdminReservationsPanel hotelSlug={hotelConfig.slug} reservations={dashboard.reservations} />
 
             <section id="inventory" className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
               <div className="liquid-glass overflow-hidden rounded-[1.5rem]">

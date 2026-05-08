@@ -12,10 +12,10 @@ BookMe v1 is an AI front desk that lets hotel guests complete routine booking, c
 |---|---|---|
 | Guest booking/check-in/checkout | In progress | Demo and eval paths work. Critical flows have deterministic fallbacks. |
 | README and class evaluation | Done | README, `eval/`, `npm run eval`, typecheck, and build are in place. |
-| Data source | Partial | Google Sheets/local store works; Supabase currently stores users and hotel config, not full reservations/inventory. |
+| Data source | Started | Supabase connector now supports reservations/inventory as primary when healthy; Google Sheets/local store remain fallbacks. |
 | Authentication | Started | NextAuth OAuth shell exists, hotel membership roles are modeled, and admin/API access is membership-gated when OAuth is enabled. |
 | Audit logs | Started | Audit event schema/helper is in place, key AI workflow completions, blocked tools, invalid requests, and fallback paths are logged when Supabase is configured. |
-| Admin operations | Partial | Dashboard exists with connector status and recent activity; still needs search, filters, handoff queue, and manual override workflows. |
+| Admin operations | Started | Dashboard has connector status, recent activity, reservation search/filter, and manual check-in/check-out override; still needs handoff queue and notes. |
 | Payments | Not started | Must be deterministic server code, not LLM-controlled. |
 | Monitoring | Not started | Needs error reporting, event logging, and daily operational review. |
 
@@ -77,11 +77,20 @@ BookMe v1 is an AI front desk that lets hotel guests complete routine booking, c
 | P0 | Harden Supabase failure behavior to avoid noisy request failures | Done |
 | P0 | Add hotel membership and role tables | Done |
 | P0 | Protect admin routes by role/hotel | Done |
-| P1 | Move reservations/inventory toward Supabase primary store | Pending |
-| P1 | Add idempotency key to booking creation | Pending |
-| P1 | Add Playwright smoke tests | Pending |
+| P1 | Move reservations/inventory toward Supabase primary store | Done |
+| P1 | Add idempotency key to booking creation | Done |
+| P1 | Add reservation search/filter in admin | Done |
+| P1 | Add manual staff check-in/check-out override | Done |
+| P1 | Add Playwright smoke tests | Done |
 | P2 | Add Razorpay payment link design, no LLM payment control | Pending |
 | P2 | Add WhatsApp guest channel design | Pending |
+| P2 | Plan/test Next.js major upgrade for npm audit advisories | Pending |
+
+## Known Residual Risks
+
+- `npm audit --omit=dev` reports advisories in the current Next.js line. The available automated fix is a major Next upgrade, so it should be handled as a planned framework upgrade with regression testing rather than a blind `--force` patch.
+- Supabase primary reservations/inventory are implemented behind the connector interface, but true multi-hotel production will need per-request hotel scoping through the connector instead of the current default hotel slug.
+- Booking idempotency now prevents common duplicate creates, but high-concurrency production booking should eventually move ID generation and room locking into a database function or transaction.
 
 ## How We Will Work
 

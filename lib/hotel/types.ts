@@ -21,6 +21,7 @@ export type Room = {
 
 export type Reservation = {
   bookingId: string;
+  idempotencyKey?: string;
   guestName: string;
   phone: string;
   email: string;
