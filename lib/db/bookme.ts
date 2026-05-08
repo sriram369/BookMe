@@ -45,6 +45,21 @@ export type BookMeAuditEventInput = {
   metadata?: Record<string, unknown>;
 };
 
+export type BookMeAuditEvent = {
+  id: string;
+  hotelSlug?: string | null;
+  actorType: string;
+  actorId?: string | null;
+  eventType: string;
+  workflow?: string | null;
+  toolName?: string | null;
+  bookingId?: string | null;
+  status: string;
+  message?: string | null;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+};
+
 type BookMeUserRow = {
   email: string;
   name: string | null;
@@ -115,6 +130,23 @@ function hotelFromRow(row: BookMeHotelRow): BookMeDbHotel {
     proposal: row.proposal,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+  };
+}
+
+function auditEventFromRow(row: BookMeAuditEventRow): BookMeAuditEvent {
+  return {
+    id: row.id,
+    hotelSlug: row.hotel_slug,
+    actorType: row.actor_type,
+    actorId: row.actor_id,
+    eventType: row.event_type,
+    workflow: row.workflow,
+    toolName: row.tool_name,
+    bookingId: row.booking_id,
+    status: row.status,
+    message: row.message,
+    metadata: row.metadata,
+    createdAt: row.created_at,
   };
 }
 
@@ -217,4 +249,14 @@ export async function recordBookMeAuditEvent(input: BookMeAuditEventInput) {
   });
 
   return rows?.[0] ?? null;
+}
+
+export async function listBookMeAuditEventsFromSupabase(options: { hotelSlug?: string; limit?: number } = {}) {
+  const limit = Math.min(Math.max(options.limit ?? 12, 1), 50);
+  const hotelFilter = options.hotelSlug ? `&hotel_slug=eq.${encodeFilterValue(options.hotelSlug)}` : "";
+  const rows = await supabaseRest<BookMeAuditEventRow[]>("bookme_audit_events", {
+    query: `select=*&order=created_at.desc&limit=${limit}${hotelFilter}`,
+  });
+
+  return rows?.map(auditEventFromRow) ?? [];
 }

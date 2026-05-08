@@ -14,8 +14,8 @@ BookMe v1 is an AI front desk that lets hotel guests complete routine booking, c
 | README and class evaluation | Done | README, `eval/`, `npm run eval`, typecheck, and build are in place. |
 | Data source | Partial | Google Sheets/local store works; Supabase currently stores users and hotel config, not full reservations/inventory. |
 | Authentication | Partial | NextAuth OAuth shell exists; production roles and hotel isolation need hardening. |
-| Audit logs | Started | Audit event schema/helper is in place and key AI workflow completions are logged when Supabase is configured. |
-| Admin operations | Partial | Dashboard exists; needs search, filters, event log, handoff queue, and manual override workflows. |
+| Audit logs | Started | Audit event schema/helper is in place, key AI workflow completions are logged, and recent events appear in admin when Supabase is configured. |
+| Admin operations | Partial | Dashboard exists with connector status and recent activity; still needs search, filters, handoff queue, and manual override workflows. |
 | Payments | Not started | Must be deterministic server code, not LLM-controlled. |
 | Monitoring | Not started | Needs error reporting, event logging, and daily operational review. |
 
@@ -73,8 +73,8 @@ BookMe v1 is an AI front desk that lets hotel guests complete routine booking, c
 | P0 | Add production Phase 1 tracker | Done |
 | P0 | Add audit event schema/helper | Done |
 | P0 | Record AI/tool workflow audit events | Started |
-| P0 | Add admin-visible audit/event view | Pending |
-| P0 | Harden Supabase failure behavior to avoid noisy request failures | Pending |
+| P0 | Add admin-visible audit/event view | Done |
+| P0 | Harden Supabase failure behavior to avoid noisy request failures | Done |
 | P1 | Add hotel membership and role tables | Pending |
 | P1 | Protect admin routes by role/hotel | Pending |
 | P1 | Move reservations/inventory toward Supabase primary store | Pending |

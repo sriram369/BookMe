@@ -15,6 +15,10 @@ export type SupabaseRestOptions = {
   prefer?: string;
 };
 
+const globalForSupabaseWarnings = globalThis as typeof globalThis & {
+  __bookmeSupabaseWarnings?: Set<string>;
+};
+
 function cleanEnvValue(value: string | undefined) {
   const trimmed = value?.trim();
   return trimmed ? trimmed : undefined;
@@ -43,6 +47,16 @@ export function hasSupabaseServerConfig(env: NodeJS.ProcessEnv = process.env) {
   return getSupabaseServerConfig(env) !== null;
 }
 
+function warnOnce(key: string, message: string) {
+  if (!globalForSupabaseWarnings.__bookmeSupabaseWarnings) {
+    globalForSupabaseWarnings.__bookmeSupabaseWarnings = new Set();
+  }
+
+  if (globalForSupabaseWarnings.__bookmeSupabaseWarnings.has(key)) return;
+  globalForSupabaseWarnings.__bookmeSupabaseWarnings.add(key);
+  console.warn(message);
+}
+
 export async function supabaseRest<T>(table: string, options: SupabaseRestOptions = {}): Promise<T | null> {
   const config = getSupabaseServerConfig();
 
@@ -51,17 +65,26 @@ export async function supabaseRest<T>(table: string, options: SupabaseRestOption
   }
 
   const query = options.query ? `?${options.query}` : "";
-  const response = await fetch(`${config.url}/rest/v1/${table}${query}`, {
-    method: options.method ?? "GET",
-    headers: {
-      apikey: config.key,
-      Authorization: `Bearer ${config.key}`,
-      "Content-Type": "application/json",
-      ...(options.prefer ? { Prefer: options.prefer } : {}),
-    },
-    body: options.body === undefined ? undefined : JSON.stringify(options.body),
-    cache: "no-store",
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${config.url}/rest/v1/${table}${query}`, {
+      method: options.method ?? "GET",
+      headers: {
+        apikey: config.key,
+        Authorization: `Bearer ${config.key}`,
+        "Content-Type": "application/json",
+        ...(options.prefer ? { Prefer: options.prefer } : {}),
+      },
+      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      cache: "no-store",
+    });
+  } catch (error) {
+    warnOnce(
+      `network:${config.url}`,
+      `Supabase is configured but unreachable at ${config.url}. BookMe will use local/connector fallbacks where available.`,
+    );
+    return null;
+  }
 
   if (!response.ok) {
     throw new Error(`Supabase ${table} request failed: ${response.status} ${response.statusText}`);

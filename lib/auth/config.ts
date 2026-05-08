@@ -132,7 +132,7 @@ export function getConfigStatus(): ConfigStatus {
     },
     supabase: {
       configured: supabaseMissing.length === 0,
-      table: "bookme_users, bookme_hotels",
+      table: "bookme_users, bookme_hotels, bookme_audit_events",
       missing: supabaseMissing,
     },
     sheets: {

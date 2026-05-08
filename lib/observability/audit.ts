@@ -3,6 +3,9 @@ import "server-only";
 import { recordBookMeAuditEvent, type BookMeAuditEventInput } from "@/lib/db/bookme";
 
 const SENSITIVE_KEY_PATTERN = /(authorization|cookie|token|secret|key|password|private|credential)/i;
+const globalForAuditWarnings = globalThis as typeof globalThis & {
+  __bookmeAuditWarningShown?: boolean;
+};
 
 function sanitizeMetadata(value: unknown): unknown {
   if (Array.isArray(value)) {
@@ -28,7 +31,9 @@ export async function auditBookMeEvent(input: BookMeAuditEventInput) {
       metadata: sanitizeMetadata(input.metadata ?? {}) as Record<string, unknown>,
     });
   } catch (error) {
-    console.warn("BookMe audit event could not be recorded.", error);
+    if (!globalForAuditWarnings.__bookmeAuditWarningShown) {
+      globalForAuditWarnings.__bookmeAuditWarningShown = true;
+      console.warn("BookMe audit events are not being recorded. Check Supabase configuration.");
+    }
   }
 }
-

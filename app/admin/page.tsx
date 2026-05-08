@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   CircleDollarSign,
   ClipboardList,
+  History,
   Hotel,
   KeyRound,
   MessageSquareText,
@@ -19,6 +20,7 @@ import { SiteHeader } from "@/components/site-header";
 import { adminDashboardDataAsync } from "@/lib/hotel/tools";
 import { findHotelConfig, getHotelConfig } from "@/lib/hotel/config-store";
 import { listConnectorBackends } from "@/lib/connectors";
+import { listBookMeAuditEventsFromSupabase } from "@/lib/db/bookme";
 import { notFound } from "next/navigation";
 
 const automations = [
@@ -71,6 +73,15 @@ function StatusPill({ status }: { status: string }) {
   return <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${tone}`}>{status}</span>;
 }
 
+function formatEventTime(value: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
 export default async function AdminPage({
   searchParams,
 }: {
@@ -82,7 +93,10 @@ export default async function AdminPage({
   if (!hotelConfig) notFound();
 
   const dashboard = await adminDashboardDataAsync(hotelConfig);
-  const connectors = await Promise.all(listConnectorBackends().map((connector) => connector.health()));
+  const [connectors, auditEvents] = await Promise.all([
+    Promise.all(listConnectorBackends().map((connector) => connector.health())),
+    listBookMeAuditEventsFromSupabase({ hotelSlug: hotelConfig.slug, limit: 8 }),
+  ]);
 
   return (
     <main className="min-h-screen bg-[hsl(var(--background))] text-white">
@@ -107,6 +121,7 @@ export default async function AdminPage({
                 ["Reservations", CalendarCheck],
                 ["Inventory", BedDouble],
                 ["Automation", Bot],
+                ["Activity", History],
                 ["Settings", Settings],
               ].map(([label, Icon]) => (
                 <a
@@ -233,6 +248,56 @@ export default async function AdminPage({
                   <p className="mt-2 text-sm leading-6 text-white/[0.58]">{automation.description}</p>
                 </article>
               ))}
+            </section>
+
+            <section id="activity" className="liquid-glass overflow-hidden rounded-[1.5rem]">
+              <div className="flex flex-col justify-between gap-3 border-b border-white/10 px-5 py-4 sm:flex-row sm:items-center">
+                <div className="flex items-center gap-3">
+                  <History className="h-5 w-5" />
+                  <div>
+                    <h2 className="text-sm font-medium text-white">Recent AI activity</h2>
+                    <p className="text-xs text-white/[0.5]">Tool-backed actions recorded for staff review</p>
+                  </div>
+                </div>
+                <span className="text-xs text-white/[0.55]">
+                  {auditEvents.length > 0 ? `${auditEvents.length} latest events` : "Audit log pending"}
+                </span>
+              </div>
+
+              {auditEvents.length > 0 ? (
+                <div className="divide-y divide-white/10">
+                  {auditEvents.map((event) => (
+                    <div key={event.id} className="grid gap-3 px-5 py-4 text-sm lg:grid-cols-[1fr_auto] lg:items-center">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-3">
+                          <p className="font-medium text-white">{event.eventType}</p>
+                          <StatusPill status={event.status} />
+                          {event.toolName ? (
+                            <span className="rounded-full bg-white/10 px-2.5 py-1 text-xs text-white/[0.68]">
+                              {event.toolName}
+                            </span>
+                          ) : null}
+                        </div>
+                        <p className="mt-1 text-sm leading-6 text-white/[0.58]">
+                          {event.message ?? "No message captured."}
+                        </p>
+                        <p className="mt-1 text-xs text-white/[0.42]">
+                          {event.workflow ?? "workflow"} · {event.bookingId ?? "no booking ID"} · {event.actorType}
+                        </p>
+                      </div>
+                      <time className="text-xs text-white/[0.48]" dateTime={event.createdAt}>
+                        {formatEventTime(event.createdAt)}
+                      </time>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="px-5 py-8">
+                  <p className="text-sm leading-6 text-white/[0.58]">
+                    No audit events are available yet. Configure Supabase, run the schema migration, and complete a guest workflow to populate this log.
+                  </p>
+                </div>
+              )}
             </section>
 
             <section id="reservations" className="liquid-glass overflow-hidden rounded-[1.5rem]">
