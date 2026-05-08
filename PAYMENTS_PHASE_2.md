@@ -87,7 +87,7 @@ Expected behavior:
 
 ## Webhook Phase
 
-The webhook should be added after a real Razorpay test account is available.
+The first webhook shell is implemented and fails closed unless `RAZORPAY_WEBHOOK_SECRET` is configured.
 
 Webhook endpoint:
 
@@ -97,11 +97,19 @@ POST /api/payments/razorpay-webhook
 
 Required behavior:
 
-- verify `x-razorpay-signature`
-- ignore unverified events
+- verify `x-razorpay-signature` against the raw request body
+- reject unverified events before parsing payment status
 - update payment status only after verified provider event
 - never trust client-submitted payment status
 - log every webhook event
+
+Supported updates:
+
+- `payment_link.paid`, paid payment link status, or captured payment status marks the booking `paid`
+- `payment.failed`, cancelled payment links, and expired payment links mark the booking `failed`
+- unrelated verified events are acknowledged as ignored
+
+The webhook resolves the booking from Razorpay `reference_id` or `notes.booking_id`, then writes through the configured reservation connector.
 
 ## Explicit Non-Goals
 
@@ -110,4 +118,3 @@ Required behavior:
 - No client-side secret usage.
 - No LLM-created payment links.
 - No marking a booking paid without provider verification.
-

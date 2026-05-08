@@ -37,6 +37,11 @@ export type ReservationConnector = {
     status: Reservation["status"],
     patch?: Partial<Reservation>,
   ): Promise<Reservation>;
+  updateReservationPayment(
+    bookingId: string,
+    patch: Pick<Reservation, "paymentStatus" | "paymentMode" | "paymentProvider"> &
+      Partial<Pick<Reservation, "paymentReference" | "payAtProperty">>,
+  ): Promise<Reservation>;
 };
 
 export type InventoryConnector = {

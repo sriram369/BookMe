@@ -65,3 +65,27 @@ test("payment link API fails closed when Razorpay is not configured", async ({ r
   const body = await response.json();
   expect(body.error).toContain("Razorpay is not configured");
 });
+
+test("Razorpay webhook fails closed when webhook secret is not configured", async ({ request }) => {
+  const response = await request.post("/api/payments/razorpay-webhook", {
+    headers: {
+      "x-razorpay-signature": "invalid",
+    },
+    data: {
+      event: "payment_link.paid",
+      payload: {
+        payment_link: {
+          entity: {
+            id: "plink_test",
+            reference_id: "BKM-2001",
+            status: "paid",
+          },
+        },
+      },
+    },
+  });
+
+  expect(response.status()).toBe(501);
+  const body = await response.json();
+  expect(body.error).toContain("webhook is not configured");
+});

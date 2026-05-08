@@ -280,6 +280,22 @@ export function createSupabaseConnector(): ConnectorBackend {
         if (!rows?.[0]) throw new Error("Reservation not found in Supabase.");
         return reservationFromRow(rows[0]);
       },
+      async updateReservationPayment(bookingId, patch) {
+        const rows = await supabaseRest<ReservationRow[]>("bookme_reservations", {
+          method: "PATCH",
+          query: `hotel_slug=eq.${encodeURIComponent(defaultHotelSlug)}&booking_id=eq.${encodeURIComponent(bookingId)}`,
+          prefer: "return=representation",
+          body: {
+            payment_status: patch.paymentStatus,
+            payment_mode: patch.paymentMode,
+            payment_provider: patch.paymentProvider,
+            payment_reference: patch.paymentReference,
+            pay_at_property: patch.payAtProperty,
+          },
+        });
+        if (!rows?.[0]) throw new Error("Reservation not found in Supabase.");
+        return reservationFromRow(rows[0]);
+      },
     },
     inventory: {
       async listRooms() {

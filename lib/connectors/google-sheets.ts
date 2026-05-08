@@ -501,6 +501,33 @@ export function createGoogleSheetsConnector(): ConnectorBackend {
 
         return updated;
       },
+      async updateReservationPayment(bookingId, patch) {
+        const client = await createClient();
+        if ("status" in client) {
+          throw new Error(client.message);
+        }
+
+        const rows = await listReservationRows(client);
+        const rowIndex = rows.findIndex((row) => row[0]?.toLowerCase() === bookingId.toLowerCase());
+        if (rowIndex < 0) {
+          throw new Error("Reservation not found in Google Sheets.");
+        }
+
+        const reservation = rowToReservation(rows[rowIndex]);
+        if (!reservation) {
+          throw new Error("Reservation row is invalid.");
+        }
+
+        const updated = { ...reservation, ...patch };
+        await client.sheets.spreadsheets.values.update({
+          spreadsheetId: client.spreadsheetId,
+          range: `Reservations!A${rowIndex + 2}:P${rowIndex + 2}`,
+          valueInputOption: "RAW",
+          requestBody: { values: [reservationToRow(updated)] },
+        });
+
+        return updated;
+      },
     },
     inventory: {
       async listRooms() {

@@ -30,6 +30,10 @@ export function getRazorpayConfig() {
   };
 }
 
+export function getRazorpayWebhookSecret() {
+  return process.env.RAZORPAY_WEBHOOK_SECRET?.trim() || null;
+}
+
 export function getPaymentStatus(): PaymentProviderStatus {
   const missing = missingEnv(["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET"]);
 
@@ -39,4 +43,3 @@ export function getPaymentStatus(): PaymentProviderStatus {
     missing,
   };
 }
-

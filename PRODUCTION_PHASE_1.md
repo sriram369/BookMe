@@ -16,7 +16,7 @@ BookMe v1 is an AI front desk that lets hotel guests complete routine booking, c
 | Authentication | Started | NextAuth OAuth shell exists, hotel membership roles are modeled, and admin/API access is membership-gated when OAuth is enabled. |
 | Audit logs | Started | Audit event schema/helper is in place, key AI workflow completions, blocked tools, invalid requests, and fallback paths are logged when Supabase is configured. |
 | Admin operations | Started | Dashboard has connector status, recent activity, reservation search/filter, and manual check-in/check-out override; still needs handoff queue and notes. |
-| Payments | Started | Razorpay payment-link design and deterministic API shell are in place; LLM remains blocked from direct payment control. |
+| Payments | Started | Razorpay payment-link API and verified webhook shell are in place; LLM remains blocked from direct payment control. |
 | Monitoring | Not started | Needs error reporting, event logging, and daily operational review. |
 
 ## Phase 1 Must-Haves
@@ -83,6 +83,7 @@ BookMe v1 is an AI front desk that lets hotel guests complete routine booking, c
 | P1 | Add manual staff check-in/check-out override | Done |
 | P1 | Add Playwright smoke tests | Done |
 | P2 | Add Razorpay payment link design, no LLM payment control | Done |
+| P2 | Add Razorpay webhook verification and reservation payment update shell | Done |
 | P2 | Add WhatsApp guest channel design | Pending |
 | P2 | Plan/test Next.js major upgrade for npm audit advisories | Pending |
 
