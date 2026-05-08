@@ -29,6 +29,12 @@ export type ConfigStatus = {
     configured: boolean;
     missing: string[];
   };
+  channels: {
+    telegram: {
+      configured: boolean;
+      missing: string[];
+    };
+  };
 };
 
 export type BookMeAuthMode = "oauth" | "local-demo";
@@ -134,6 +140,7 @@ export function getConfigStatus(): ConfigStatus {
   ]);
   const openRouterMissing = missingEnv(["OPENROUTER_API_KEY"]);
   const paymentMissing = missingEnv(["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET"]);
+  const telegramMissing = missingEnv(["TELEGRAM_BOT_TOKEN", "TELEGRAM_WEBHOOK_SECRET"]);
 
   return {
     auth: {
@@ -160,6 +167,12 @@ export function getConfigStatus(): ConfigStatus {
       provider: "razorpay",
       configured: paymentMissing.length === 0,
       missing: paymentMissing,
+    },
+    channels: {
+      telegram: {
+        configured: telegramMissing.length === 0,
+        missing: telegramMissing,
+      },
     },
   };
 }

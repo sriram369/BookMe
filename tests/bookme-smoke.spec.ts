@@ -89,3 +89,26 @@ test("Razorpay webhook fails closed when webhook secret is not configured", asyn
   const body = await response.json();
   expect(body.error).toContain("webhook is not configured");
 });
+
+test("Telegram guest channel fails closed when bot credentials are not configured", async ({ request }) => {
+  const response = await request.post("/api/channels/telegram", {
+    headers: {
+      "x-telegram-bot-api-secret-token": "invalid",
+    },
+    data: {
+      update_id: 1001,
+      message: {
+        message_id: 1,
+        text: "I'm checking in, booking ID BKM-2001.",
+        chat: {
+          id: 123456,
+          type: "private",
+        },
+      },
+    },
+  });
+
+  expect(response.status()).toBe(501);
+  const body = await response.json();
+  expect(body.error).toContain("Telegram channel is not configured");
+});

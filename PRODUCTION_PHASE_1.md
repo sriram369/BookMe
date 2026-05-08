@@ -84,7 +84,7 @@ BookMe v1 is an AI front desk that lets hotel guests complete routine booking, c
 | P1 | Add Playwright smoke tests | Done |
 | P2 | Add Razorpay payment link design, no LLM payment control | Done |
 | P2 | Add Razorpay webhook verification and reservation payment update shell | Done |
-| P2 | Add WhatsApp guest channel design | Pending |
+| P2 | Add Telegram guest channel design/API adapter | Done |
 | P2 | Plan/test Next.js major upgrade for npm audit advisories | Pending |
 
 ## Known Residual Risks

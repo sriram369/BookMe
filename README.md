@@ -91,6 +91,8 @@ The repository includes:
 - reservation and inventory tool layer
 - optional Google Sheets connector
 - optional Supabase persistence for hotel configuration
+- optional Razorpay payment-link and webhook shell
+- optional Telegram guest messaging channel
 - safe configuration and connector health endpoints
 
 Important routes:
@@ -106,6 +108,9 @@ Important routes:
 | `/api/agent` | AI front-desk endpoint |
 | `/api/config` | Safe configuration status |
 | `/api/connectors` | Connector health and initialization |
+| `/api/payments/razorpay-link` | Protected Razorpay payment-link creation |
+| `/api/payments/razorpay-webhook` | Verified Razorpay payment webhook |
+| `/api/channels/telegram` | Telegram guest message webhook and channel health |
 
 ## Baseline Comparison
 
@@ -226,6 +231,8 @@ http://localhost:3000/admin?hotel=sriram-hotel
 - Optional: OpenAI or OpenRouter API key for live model calls
 - Optional: Google Sheets service account for live Sheets-backed reservations
 - Optional: Supabase project for persistent hotel configuration
+- Optional: Razorpay test account for hosted payment links
+- Optional: Telegram bot token for guest messaging demo
 
 ### Install
 
@@ -296,6 +303,22 @@ NEXTAUTH_URL=http://localhost:3000
 NEXTAUTH_SECRET=
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
+```
+
+For Razorpay:
+
+```bash
+RAZORPAY_KEY_ID=
+RAZORPAY_KEY_SECRET=
+RAZORPAY_WEBHOOK_SECRET=
+```
+
+For Telegram:
+
+```bash
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_WEBHOOK_SECRET=
+TELEGRAM_DEFAULT_HOTEL_SLUG=sriram-hotel
 ```
 
 Do not commit API keys, service account JSON files, private data, or guest PII.
