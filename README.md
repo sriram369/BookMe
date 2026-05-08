@@ -1,5 +1,7 @@
 # BookMe
 
+**Course final note:** BookMe is an ongoing side project that I am building beyond this class, and this repository also contains the complete deliverables for the BU.330.760 Spring 2026 GenAI final project: the working app, narrow business workflow, GenAI design explanation, baseline comparison, evaluation notes, setup instructions, and demo artifact links.
+
 BookMe is a web-based GenAI front-desk assistant for independent hotels. A hotel can share one guest portal link by QR code, SMS, email, or website button so guests can complete three common front-desk workflows in natural language:
 
 - book a room
