@@ -45,3 +45,23 @@ test("admin can manually override reservation check-in", async ({ request }) => 
   expect(body.message).toContain("Checked in");
   expect(body.reservation?.status).toBe("Checked In");
 });
+
+test("payment link API fails closed when Razorpay is not configured", async ({ request }) => {
+  const response = await request.post("/api/payments/razorpay-link", {
+    data: {
+      hotelSlug: "sriram-hotel",
+      bookingId: "BKM-2001",
+      amountInPaise: 499900,
+      description: "Room payment for BKM-2001",
+      customer: {
+        name: "James Lee",
+        email: "james@example.com",
+        phone: "+916175550192",
+      },
+    },
+  });
+
+  expect(response.status()).toBe(501);
+  const body = await response.json();
+  expect(body.error).toContain("Razorpay is not configured");
+});

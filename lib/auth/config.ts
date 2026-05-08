@@ -24,6 +24,11 @@ export type ConfigStatus = {
     model: string;
     missing: string[];
   };
+  payments: {
+    provider: "razorpay";
+    configured: boolean;
+    missing: string[];
+  };
 };
 
 export type BookMeAuthMode = "oauth" | "local-demo";
@@ -128,6 +133,7 @@ export function getConfigStatus(): ConfigStatus {
     "GOOGLE_SHEETS_SPREADSHEET_ID",
   ]);
   const openRouterMissing = missingEnv(["OPENROUTER_API_KEY"]);
+  const paymentMissing = missingEnv(["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET"]);
 
   return {
     auth: {
@@ -149,6 +155,11 @@ export function getConfigStatus(): ConfigStatus {
       configured: openRouterMissing.length === 0,
       model: process.env.OPENROUTER_MODEL?.trim() || "openrouter/free",
       missing: openRouterMissing,
+    },
+    payments: {
+      provider: "razorpay",
+      configured: paymentMissing.length === 0,
+      missing: paymentMissing,
     },
   };
 }
