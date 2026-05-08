@@ -43,7 +43,7 @@ export default async function DemoPage({
               Welcome to <em className="not-italic text-white/60">{hotel.hotelName}.</em>
             </h1>
             <p className="animate-fade-rise-delay mt-8 max-w-2xl text-base leading-relaxed text-white/[0.62] sm:text-lg">
-              Book a room, check in, or check out with our AI front desk. No line, no phone call, no app download.
+              Book a room, check in, or check out with our AI front desk. Use seeded demo bookings BKM-2001 and BKM-2002 to show the full flow.
             </p>
 
             <div className="animate-fade-rise-delay-2 mt-12 grid gap-3 sm:grid-cols-3">
@@ -86,16 +86,16 @@ export default async function DemoPage({
         <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.7fr_1fr]">
           <div>
             <p className="text-sm font-medium uppercase tracking-[0.2em] text-white/[0.45]">
-              Demo admin
+              Staff dashboard
             </p>
             <h2
               className="mt-3 text-5xl font-normal leading-none tracking-[-1.2px] text-white"
               style={{ fontFamily: "'Instrument Serif', serif" }}
             >
-              Reservations update behind the scenes.
+              Guest actions stay visible to staff.
             </h2>
             <p className="mt-4 text-base leading-7 text-white/[0.58]">
-              This is the operator view we will connect to mock data first, then Google Sheets.
+              The operator view shows booking status, payment status, and manual handoff points so the hotel can stay in control.
             </p>
           </div>
 
@@ -126,20 +126,20 @@ export default async function DemoPage({
         <div className="mx-auto flex max-w-7xl flex-col justify-between gap-5 md:flex-row md:items-center">
           <div>
             <p className="text-sm font-medium uppercase tracking-[0.2em] text-white/[0.45]">
-              Next step
+              Staff control
             </p>
             <h2
               className="mt-2 text-4xl font-normal tracking-[-1px]"
               style={{ fontFamily: "'Instrument Serif', serif" }}
             >
-              Connect the real agent workflow.
+              Open the admin view after a guest action.
             </h2>
           </div>
           <Link
-            href="/"
+            href={`/admin?hotel=${hotel.slug}`}
             className="liquid-glass inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-medium text-white transition hover:scale-[1.03]"
           >
-            View BookMe landing
+            Open admin dashboard
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>

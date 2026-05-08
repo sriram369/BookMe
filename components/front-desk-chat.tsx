@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
-import { Send, Star } from "lucide-react";
+import { RotateCcw, Send, Sparkles } from "lucide-react";
 import { DotLoader } from "./dot-loader";
 import type { SummaryCard } from "@/lib/hotel/types";
 
@@ -18,11 +18,11 @@ type AgentResponse = {
   toolCalls?: string[];
 };
 
-const examples = [
-  "I'm checking in. My phone number is 617-555-0192.",
-  "I want to check out, booking ID BKM-1029.",
-  "Do you have a king room from 2026-05-01 to 2026-05-03?",
-];
+function formatFutureDate(offsetDays: number) {
+  const date = new Date();
+  date.setDate(date.getDate() + offsetDays);
+  return date.toISOString().slice(0, 10);
+}
 
 function SummaryCardView({ card }: { card: SummaryCard }) {
   return (
@@ -56,10 +56,21 @@ type FrontDeskChatProps = {
 };
 
 export function FrontDeskChat({ hotelSlug, hotelName = "Sriram Hotel" }: FrontDeskChatProps) {
+  const welcomeMessage: ChatMessage = {
+    role: "assistant",
+    content: `Welcome to ${hotelName}. I can help you book a room, check in, or check out.`,
+  };
+  const examples = useMemo(
+    () => [
+      "I'm checking in, booking ID BKM-2001.",
+      "I want to check out, booking ID BKM-2002.",
+      `Do you have a king room from ${formatFutureDate(7)} to ${formatFutureDate(9)}?`,
+    ],
+    [],
+  );
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
-      role: "assistant",
-      content: `Welcome to ${hotelName}. I can help you book a room, check in, or check out.`,
+      ...welcomeMessage,
     },
   ]);
   const [input, setInput] = useState("");
@@ -125,6 +136,12 @@ export function FrontDeskChat({ hotelSlug, hotelName = "Sriram Hotel" }: FrontDe
     void sendMessage(input);
   }
 
+  function resetChat() {
+    setMessages([{ ...welcomeMessage }]);
+    setInput("");
+    setError(null);
+  }
+
   return (
     <section id="front-desk" className="liquid-glass rounded-[2rem] p-3 shadow-soft">
       <div className="overflow-hidden rounded-[1.55rem] border border-white/10 bg-black/20">
@@ -133,12 +150,16 @@ export function FrontDeskChat({ hotelSlug, hotelName = "Sriram Hotel" }: FrontDe
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/[0.45]">
               AI front desk
             </p>
-            <p className="text-sm font-medium text-white">Ask naturally</p>
+            <p className="text-sm font-medium text-white">Guest web front desk</p>
           </div>
-          <div className="liquid-glass flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium text-white">
-            <Star className="h-3.5 w-3.5 fill-white" />
-            Demo
-          </div>
+          <button
+            type="button"
+            onClick={resetChat}
+            className="liquid-glass inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-white transition hover:scale-[1.03]"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            Reset
+          </button>
         </div>
 
         <div className="max-h-[640px] space-y-4 overflow-y-auto p-4 sm:p-5">
@@ -168,6 +189,10 @@ export function FrontDeskChat({ hotelSlug, hotelName = "Sriram Hotel" }: FrontDe
         </div>
 
         <div className="border-t border-white/10 p-4">
+          <div className="mb-3 flex items-center gap-2 text-xs font-medium text-white/[0.55]">
+            <Sparkles className="h-3.5 w-3.5 text-white/70" />
+            Try a seeded demo request
+          </div>
           <div className="mb-3 flex flex-wrap gap-2">
             {examples.map((example) => (
               <button
@@ -185,7 +210,7 @@ export function FrontDeskChat({ hotelSlug, hotelName = "Sriram Hotel" }: FrontDe
             <input
               value={input}
               onChange={(event) => setInput(event.target.value)}
-              placeholder='Try: "I want to check in with my phone number"'
+              placeholder='Try: "I am checking in, booking ID BKM-2001"'
               className="min-h-11 flex-1 bg-transparent px-3 text-sm text-white outline-none placeholder:text-white/[0.45]"
             />
             <button
