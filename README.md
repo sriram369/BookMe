@@ -222,6 +222,15 @@ The admin dashboard is available at:
 http://localhost:3000/admin?hotel=sriram-hotel
 ```
 
+The class demo does not require paid provider accounts. Razorpay and Telegram are optional production adapters; when credentials are missing, their endpoints fail closed and explain the missing setup instead of faking success. See:
+
+```text
+PROVIDER_DEMO_NOTES.md
+SECURITY_UPGRADE_PLAN.md
+PAYMENTS_PHASE_2.md
+TELEGRAM_CHANNEL_PHASE_2.md
+```
+
 ## Setup and Usage
 
 ### Prerequisites

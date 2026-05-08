@@ -85,11 +85,13 @@ BookMe v1 is an AI front desk that lets hotel guests complete routine booking, c
 | P2 | Add Razorpay payment link design, no LLM payment control | Done |
 | P2 | Add Razorpay webhook verification and reservation payment update shell | Done |
 | P2 | Add Telegram guest channel design/API adapter | Done |
-| P2 | Plan/test Next.js major upgrade for npm audit advisories | Pending |
+| P2 | Add admin payment action UI and setup-needed state | Done |
+| P2 | Add real provider demo notes for no-cost class presentation | Done |
+| P2 | Plan Next.js major upgrade for npm audit advisories | Done |
 
 ## Known Residual Risks
 
-- `npm audit --omit=dev` reports advisories in the current Next.js line. The available automated fix is a major Next upgrade, so it should be handled as a planned framework upgrade with regression testing rather than a blind `--force` patch.
+- `npm audit --omit=dev` reports advisories in the current Next.js line. The available automated fix is a major Next upgrade, documented in `SECURITY_UPGRADE_PLAN.md`, so it should be handled as a planned framework upgrade with regression testing rather than a blind `--force` patch.
 - Supabase primary reservations/inventory are implemented behind the connector interface, but true multi-hotel production will need per-request hotel scoping through the connector instead of the current default hotel slug.
 - Booking idempotency now prevents common duplicate creates, but high-concurrency production booking should eventually move ID generation and room locking into a database function or transaction.
 

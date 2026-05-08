@@ -1,29 +1,35 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Search } from "lucide-react";
+import { CreditCard, ExternalLink, Search } from "lucide-react";
 
 type ReservationRow = {
   bookingId: string;
   guestName: string;
   contact: string;
+  customerEmail?: string;
+  customerPhone?: string;
   room: string;
   dates: string;
   status: string;
   total: string;
+  amountInPaise: number;
   paymentStatus: string;
   paymentMode: string;
+  paymentLinkUrl?: string;
 };
 
 function StatusPill({ status }: { status: string }) {
   const tone =
-    status === "Checked In"
+    status === "Checked In" || status === "Paid"
       ? "bg-emerald-300/15 text-emerald-100"
-      : status === "Confirmed"
+      : status === "Confirmed" || status === "Payment link created"
         ? "bg-white/10 text-white"
+        : status === "Failed" || status === "Setup needed"
+          ? "bg-red-300/15 text-red-100"
         : "bg-sky-300/15 text-sky-100";
 
-  return <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${tone}`}>{status}</span>;
+  return <span className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium ${tone}`}>{status}</span>;
 }
 
 export function AdminReservationsPanel({
@@ -38,6 +44,7 @@ export function AdminReservationsPanel({
   const [statusFilter, setStatusFilter] = useState("All");
   const [message, setMessage] = useState("");
   const [pendingBookingId, setPendingBookingId] = useState<string | null>(null);
+  const [pendingPaymentBookingId, setPendingPaymentBookingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const filteredRows = useMemo(() => {
@@ -96,6 +103,75 @@ export function AdminReservationsPanel({
     });
   }
 
+  function createPaymentLink(reservation: ReservationRow) {
+    setMessage("");
+    setPendingPaymentBookingId(reservation.bookingId);
+    startTransition(async () => {
+      try {
+        const response = await fetch("/api/payments/razorpay-link", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            hotelSlug,
+            bookingId: reservation.bookingId,
+            amountInPaise: reservation.amountInPaise,
+            description: `Room payment for ${reservation.bookingId}`,
+            customer: {
+              name: reservation.guestName,
+              email: reservation.customerEmail,
+              phone: reservation.customerPhone,
+            },
+          }),
+        });
+        const data = (await response.json()) as {
+          error?: string;
+          paymentLink?: {
+            shortUrl?: string;
+            status?: string;
+          };
+        };
+
+        if (!response.ok) {
+          setRows((current) =>
+            current.map((row) =>
+              row.bookingId === reservation.bookingId && response.status === 501
+                ? { ...row, paymentStatus: "Setup needed", paymentMode: "Razorpay" }
+                : row,
+            ),
+          );
+          setMessage(
+            response.status === 501
+              ? "Razorpay is not configured. Add test credentials to create hosted payment links."
+              : data.error ?? "Could not create payment link.",
+          );
+          return;
+        }
+
+        setRows((current) =>
+          current.map((row) =>
+            row.bookingId === reservation.bookingId
+              ? {
+                  ...row,
+                  paymentStatus: "Payment link created",
+                  paymentMode: "Razorpay",
+                  paymentLinkUrl: data.paymentLink?.shortUrl,
+                }
+              : row,
+          ),
+        );
+
+        if (data.paymentLink?.shortUrl) {
+          window.open(data.paymentLink.shortUrl, "_blank", "noopener,noreferrer");
+        }
+        setMessage("Payment link created. Opened Razorpay hosted checkout in a new tab.");
+      } catch {
+        setMessage("Could not reach the payment link API.");
+      } finally {
+        setPendingPaymentBookingId(null);
+      }
+    });
+  }
+
   return (
     <section id="reservations" className="liquid-glass overflow-hidden rounded-[1.5rem]">
       <div className="flex flex-col justify-between gap-3 border-b border-white/10 px-5 py-4 lg:flex-row lg:items-center">
@@ -132,7 +208,7 @@ export function AdminReservationsPanel({
       ) : null}
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[1040px] text-left text-sm">
+        <table className="w-full min-w-[1180px] text-left text-sm">
           <thead className="border-b border-white/10 text-xs uppercase tracking-[0.16em] text-white/[0.42]">
             <tr>
               <th className="px-5 py-3 font-medium">Booking</th>
@@ -148,7 +224,7 @@ export function AdminReservationsPanel({
           <tbody className="divide-y divide-white/10">
             {filteredRows.map((reservation) => (
               <tr key={reservation.bookingId}>
-                <td className="px-5 py-4 font-medium text-white">{reservation.bookingId}</td>
+                <td className="whitespace-nowrap px-5 py-4 font-medium text-white">{reservation.bookingId}</td>
                 <td className="px-5 py-4">
                   <p className="font-medium text-white">{reservation.guestName}</p>
                   <p className="text-xs text-white/[0.45]">{reservation.contact}</p>
@@ -159,12 +235,38 @@ export function AdminReservationsPanel({
                   <StatusPill status={reservation.status} />
                 </td>
                 <td className="px-5 py-4">
-                  <p className="font-medium text-white">{reservation.paymentStatus}</p>
-                  <p className="text-xs text-white/[0.45]">{reservation.paymentMode}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <StatusPill status={reservation.paymentStatus} />
+                    {reservation.paymentLinkUrl ? (
+                      <a
+                        href={reservation.paymentLinkUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="Open payment link"
+                        className="grid h-7 w-7 place-items-center rounded-full border border-white/15 text-white transition hover:bg-white/10"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    ) : null}
+                  </div>
+                  <p className="mt-1 text-xs text-white/[0.45]">{reservation.paymentMode}</p>
                 </td>
                 <td className="px-5 py-4 text-white">{reservation.total}</td>
                 <td className="px-5 py-4">
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      disabled={
+                        isPending ||
+                        reservation.amountInPaise <= 0 ||
+                        reservation.paymentStatus.toLowerCase() === "paid"
+                      }
+                      onClick={() => createPaymentLink(reservation)}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-white/15 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-35"
+                    >
+                      <CreditCard className="h-3.5 w-3.5" />
+                      {pendingPaymentBookingId === reservation.bookingId ? "Creating" : "Pay"}
+                    </button>
                     <button
                       type="button"
                       disabled={isPending || reservation.status !== "Confirmed"}
@@ -191,4 +293,3 @@ export function AdminReservationsPanel({
     </section>
   );
 }
-
