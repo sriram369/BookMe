@@ -26,6 +26,8 @@ export type ConfigStatus = {
   };
 };
 
+export type BookMeAuthMode = "oauth" | "local-demo";
+
 export type OAuthProviderCredentials = {
   google?: {
     clientId: string;
@@ -81,6 +83,10 @@ export function hasConfiguredOAuthProviders() {
   return providers.google || providers.github;
 }
 
+export function getBookMeAuthMode(): BookMeAuthMode {
+  return hasConfiguredOAuthProviders() ? "oauth" : "local-demo";
+}
+
 export function getAuthSecret() {
   const secret = process.env.NEXTAUTH_SECRET?.trim();
 
@@ -125,14 +131,14 @@ export function getConfigStatus(): ConfigStatus {
 
   return {
     auth: {
-      mode: oauthConfigured ? "oauth" : "local-demo",
+      mode: getBookMeAuthMode(),
       protectedRoutes: oauthConfigured,
       nextAuthSecret: hasEnv("NEXTAUTH_SECRET"),
       providers,
     },
     supabase: {
       configured: supabaseMissing.length === 0,
-      table: "bookme_users, bookme_hotels, bookme_audit_events",
+      table: "bookme_users, bookme_hotels, bookme_audit_events, bookme_hotel_memberships",
       missing: supabaseMissing,
     },
     sheets: {

@@ -204,6 +204,29 @@ function isTerminalWorkflowTool(name: string) {
   return name === "create_booking" || name === "checkin_guest" || name === "checkout_guest";
 }
 
+async function auditAgentResult(input: {
+  hotelSlug: string;
+  result: AgentResult;
+  workflow?: string;
+  mode: string;
+  status?: "ok" | "blocked" | "error";
+  eventType?: string;
+}) {
+  await auditBookMeEvent({
+    hotelSlug: input.hotelSlug,
+    actorType: "guest",
+    eventType: input.eventType ?? "agent.workflow.completed",
+    workflow: input.workflow,
+    toolName: input.result.toolCalls.at(-1) ?? null,
+    status: input.status ?? (input.result.card || input.result.toolCalls.length > 0 ? "ok" : "blocked"),
+    message: input.result.message,
+    metadata: {
+      toolCalls: input.result.toolCalls,
+      mode: input.mode,
+    },
+  });
+}
+
 type AvailabilitySnapshot = {
   roomId: string;
   checkin: string;
@@ -440,43 +463,37 @@ export async function runBookMeAgent(messages: ClientChatMessage[], hotelSlug?: 
   const hotel = await getHotelConfig(hotelSlug);
   if (shouldUseDeterministicStayService(messages)) {
     const result = await fallbackAgent(messages, hotel);
-    await auditBookMeEvent({
+    await auditAgentResult({
       hotelSlug: hotel.slug,
-      actorType: "guest",
-      eventType: "agent.workflow.completed",
+      result,
       workflow: "stay_service",
-      toolName: result.toolCalls.at(-1) ?? null,
-      status: result.card ? "ok" : "blocked",
-      message: result.message,
-      metadata: {
-        toolCalls: result.toolCalls,
-        mode: "deterministic",
-      },
+      mode: "deterministic",
     });
     return result;
   }
 
   const deterministic = await deterministicBookingAgent(messages);
   if (deterministic) {
-    await auditBookMeEvent({
+    await auditAgentResult({
       hotelSlug: hotel.slug,
-      actorType: "guest",
-      eventType: "agent.workflow.completed",
+      result: deterministic,
       workflow: "booking",
-      toolName: deterministic.toolCalls.at(-1) ?? null,
-      status: deterministic.card ? "ok" : "blocked",
-      message: deterministic.message,
-      metadata: {
-        toolCalls: deterministic.toolCalls,
-        mode: "deterministic",
-      },
+      mode: "deterministic",
     });
     return deterministic;
   }
 
   const provider = getChatProviderConfig();
   if (!provider) {
-    return fallbackAgent(messages, hotel);
+    const result = await fallbackAgent(messages, hotel);
+    await auditAgentResult({
+      hotelSlug: hotel.slug,
+      result,
+      workflow: "fallback",
+      mode: "no_provider",
+      eventType: "agent.workflow.fallback",
+    });
+    return result;
   }
 
   const requestMessages: OpenRouterMessage[] = [
@@ -505,35 +522,75 @@ export async function runBookMeAgent(messages: ClientChatMessage[], hotelSlug?: 
         }),
       });
     } catch {
-      return resultFromLatestTool(latestCard, toolCalls, model) ?? fallbackAgent(messages, hotel);
+      const result = resultFromLatestTool(latestCard, toolCalls, model) ?? (await fallbackAgent(messages, hotel));
+      await auditAgentResult({
+        hotelSlug: hotel.slug,
+        result,
+        workflow: "llm_request",
+        mode: "provider_fetch_failed",
+        eventType: "agent.workflow.fallback",
+      });
+      return result;
     }
 
     let data: OpenRouterResponse;
     try {
       data = (await response.json()) as OpenRouterResponse;
     } catch {
-      return resultFromLatestTool(latestCard, toolCalls, model) ?? fallbackAgent(messages, hotel);
+      const result = resultFromLatestTool(latestCard, toolCalls, model) ?? (await fallbackAgent(messages, hotel));
+      await auditAgentResult({
+        hotelSlug: hotel.slug,
+        result,
+        workflow: "llm_request",
+        mode: "provider_parse_failed",
+        eventType: "agent.workflow.fallback",
+      });
+      return result;
     }
 
     if (!response.ok || data.error) {
-      return resultFromLatestTool(latestCard, toolCalls, model) ?? fallbackAgent(messages, hotel);
+      const result = resultFromLatestTool(latestCard, toolCalls, model) ?? (await fallbackAgent(messages, hotel));
+      await auditAgentResult({
+        hotelSlug: hotel.slug,
+        result,
+        workflow: "llm_request",
+        mode: "provider_error",
+        eventType: "agent.workflow.fallback",
+      });
+      return result;
     }
 
     model = data.model;
     const assistant = data.choices?.[0]?.message;
     if (!assistant) {
-      return resultFromLatestTool(latestCard, toolCalls, model) ?? fallbackAgent(messages, hotel);
+      const result = resultFromLatestTool(latestCard, toolCalls, model) ?? (await fallbackAgent(messages, hotel));
+      await auditAgentResult({
+        hotelSlug: hotel.slug,
+        result,
+        workflow: "llm_request",
+        mode: "empty_provider_response",
+        eventType: "agent.workflow.fallback",
+      });
+      return result;
     }
 
     const calls = assistant.tool_calls ?? [];
     if (calls.length === 0) {
       const content = assistant.content?.trim();
-      return {
+      const result = {
         message: content || (await fallbackAgent(messages, hotel)).message,
         card: latestCard,
         model,
         toolCalls,
       };
+      await auditAgentResult({
+        hotelSlug: hotel.slug,
+        result,
+        workflow: toolCalls.length > 0 ? "tool_assisted_response" : "chat_response",
+        mode: "llm_response",
+        eventType: toolCalls.length > 0 ? "agent.workflow.completed" : "agent.workflow.responded",
+      });
+      return result;
     }
 
     requestMessages.push({
@@ -557,6 +614,22 @@ export async function runBookMeAgent(messages: ClientChatMessage[], hotelSlug?: 
         latestAvailability = availabilityFromToolResult(result) ?? latestAvailability;
       }
       latestCard = result.card ?? latestCard;
+
+      if (!result.ok) {
+        await auditBookMeEvent({
+          hotelSlug: hotel.slug,
+          actorType: "guest",
+          eventType: "agent.tool.blocked",
+          workflow: call.function.name,
+          toolName: call.function.name,
+          status: "blocked",
+          message: result.message,
+          metadata: {
+            toolCalls,
+            mode: "llm_tool_call",
+          },
+        });
+      }
 
       if (result.ok && result.card && isTerminalWorkflowTool(call.function.name)) {
         await auditBookMeEvent({

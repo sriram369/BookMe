@@ -49,11 +49,26 @@ create table if not exists public.bookme_audit_events (
   constraint bookme_audit_events_metadata_object check (jsonb_typeof(metadata) = 'object')
 );
 
+create table if not exists public.bookme_hotel_memberships (
+  id uuid primary key default gen_random_uuid(),
+  hotel_slug text not null,
+  user_email citext not null,
+  role text not null default 'staff',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint bookme_hotel_memberships_role_check check (role in ('owner', 'admin', 'staff')),
+  constraint bookme_hotel_memberships_hotel_slug_not_blank check (length(btrim(hotel_slug)) > 0),
+  constraint bookme_hotel_memberships_user_email_not_blank check (length(btrim(user_email::text)) > 0),
+  constraint bookme_hotel_memberships_unique unique (hotel_slug, user_email)
+);
+
 create index if not exists bookme_hotels_created_at_idx on public.bookme_hotels (created_at desc);
 create index if not exists bookme_users_created_at_idx on public.bookme_users (created_at desc);
 create index if not exists bookme_audit_events_hotel_created_at_idx on public.bookme_audit_events (hotel_slug, created_at desc);
 create index if not exists bookme_audit_events_booking_id_idx on public.bookme_audit_events (booking_id);
 create index if not exists bookme_audit_events_event_type_idx on public.bookme_audit_events (event_type);
+create index if not exists bookme_hotel_memberships_user_email_idx on public.bookme_hotel_memberships (user_email);
+create index if not exists bookme_hotel_memberships_hotel_slug_idx on public.bookme_hotel_memberships (hotel_slug);
 
 create or replace function public.set_bookme_updated_at()
 returns trigger
@@ -77,6 +92,13 @@ before update on public.bookme_hotels
 for each row
 execute function public.set_bookme_updated_at();
 
+drop trigger if exists set_bookme_hotel_memberships_updated_at on public.bookme_hotel_memberships;
+create trigger set_bookme_hotel_memberships_updated_at
+before update on public.bookme_hotel_memberships
+for each row
+execute function public.set_bookme_updated_at();
+
 alter table public.bookme_users enable row level security;
 alter table public.bookme_hotels enable row level security;
 alter table public.bookme_audit_events enable row level security;
+alter table public.bookme_hotel_memberships enable row level security;

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  AlertTriangle,
   ArrowRight,
   BedDouble,
   Bot,
@@ -16,7 +17,11 @@ import {
   Settings,
   ShieldCheck,
 } from "lucide-react";
+import { getServerSession } from "next-auth";
 import { SiteHeader } from "@/components/site-header";
+import { authOptions } from "@/lib/auth/options";
+import { getBookMeAuthMode } from "@/lib/auth/config";
+import { requireHotelAdminAccess } from "@/lib/auth/hotel-access";
 import { adminDashboardDataAsync } from "@/lib/hotel/tools";
 import { findHotelConfig, getHotelConfig } from "@/lib/hotel/config-store";
 import { listConnectorBackends } from "@/lib/connectors";
@@ -82,6 +87,43 @@ function formatEventTime(value: string) {
   }).format(new Date(value));
 }
 
+function AccessDenied({
+  title,
+  body,
+}: {
+  title: string;
+  body: string;
+}) {
+  return (
+    <main className="min-h-screen bg-[hsl(var(--background))] text-white">
+      <section className="demo-static-hero relative min-h-screen overflow-hidden">
+        <SiteHeader ctaLabel="Sign in" ctaHref="/signin" />
+        <div className="relative z-10 mx-auto flex max-w-3xl flex-col px-6 py-24 sm:px-8">
+          <div className="liquid-glass rounded-[1.5rem] p-6 sm:p-8">
+            <div className="mb-5 grid h-12 w-12 place-items-center rounded-2xl bg-red-300/15 text-red-100">
+              <AlertTriangle className="h-6 w-6" />
+            </div>
+            <h1
+              className="text-4xl font-normal tracking-[-1px] text-white"
+              style={{ fontFamily: "'Instrument Serif', serif" }}
+            >
+              {title}
+            </h1>
+            <p className="mt-4 text-sm leading-6 text-white/[0.62]">{body}</p>
+            <Link
+              href="/signin"
+              className="mt-6 inline-flex items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-medium text-zinc-950 transition hover:scale-[1.03]"
+            >
+              Sign in
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </div>
+      </section>
+    </main>
+  );
+}
+
 export default async function AdminPage({
   searchParams,
 }: {
@@ -91,6 +133,28 @@ export default async function AdminPage({
     ? await findHotelConfig(searchParams.hotel)
     : await getHotelConfig();
   if (!hotelConfig) notFound();
+
+  const authMode = getBookMeAuthMode();
+  const session = authMode === "oauth" ? await getServerSession(authOptions) : null;
+  const access = await requireHotelAdminAccess({
+    hotelSlug: hotelConfig.slug,
+    userEmail: session?.user?.email,
+    authMode,
+  });
+
+  if (!access.ok) {
+    const needsSetup = access.reason === "membership_store_unavailable";
+    return (
+      <AccessDenied
+        title={needsSetup ? "Admin access is not configured." : "You do not have access to this hotel."}
+        body={
+          needsSetup
+            ? "Supabase hotel memberships are required when OAuth is enabled. Apply the latest schema and add an owner/admin membership for this hotel."
+            : "Ask the hotel owner to add your email as an owner, admin, or staff member before opening this workspace."
+        }
+      />
+    );
+  }
 
   const dashboard = await adminDashboardDataAsync(hotelConfig);
   const [connectors, auditEvents] = await Promise.all([

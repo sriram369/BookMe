@@ -60,6 +60,17 @@ export type BookMeAuditEvent = {
   createdAt: string;
 };
 
+export type BookMeHotelRole = "owner" | "admin" | "staff";
+
+export type BookMeHotelMembership = {
+  id: string;
+  hotelSlug: string;
+  userEmail: string;
+  role: BookMeHotelRole;
+  createdAt: string;
+  updatedAt: string;
+};
+
 type BookMeUserRow = {
   email: string;
   name: string | null;
@@ -82,6 +93,15 @@ type BookMeAuditEventRow = {
   message: string | null;
   metadata: Record<string, unknown>;
   created_at: string;
+};
+
+type BookMeHotelMembershipRow = {
+  id: string;
+  hotel_slug: string;
+  user_email: string;
+  role: BookMeHotelRole;
+  created_at: string;
+  updated_at: string;
 };
 
 type BookMeHotelRow = {
@@ -147,6 +167,17 @@ function auditEventFromRow(row: BookMeAuditEventRow): BookMeAuditEvent {
     message: row.message,
     metadata: row.metadata,
     createdAt: row.created_at,
+  };
+}
+
+function membershipFromRow(row: BookMeHotelMembershipRow): BookMeHotelMembership {
+  return {
+    id: row.id,
+    hotelSlug: row.hotel_slug,
+    userEmail: row.user_email,
+    role: row.role,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
   };
 }
 
@@ -259,4 +290,48 @@ export async function listBookMeAuditEventsFromSupabase(options: { hotelSlug?: s
   });
 
   return rows?.map(auditEventFromRow) ?? [];
+}
+
+export async function listBookMeHotelMembershipsFromSupabase(options: { hotelSlug?: string; userEmail?: string } = {}) {
+  const filters = [
+    "select=*",
+    "order=created_at.asc",
+    options.hotelSlug ? `hotel_slug=eq.${encodeFilterValue(options.hotelSlug)}` : "",
+    options.userEmail ? `user_email=eq.${encodeFilterValue(options.userEmail.toLowerCase())}` : "",
+  ].filter(Boolean);
+
+  const rows = await supabaseRest<BookMeHotelMembershipRow[]>("bookme_hotel_memberships", {
+    query: filters.join("&"),
+  });
+
+  return rows?.map(membershipFromRow) ?? [];
+}
+
+export async function getBookMeHotelMembershipFromSupabase(hotelSlug: string, userEmail: string) {
+  const rows = await listBookMeHotelMembershipsFromSupabase({ hotelSlug, userEmail });
+  return rows[0] ?? null;
+}
+
+export async function countBookMeHotelMembershipsFromSupabase(hotelSlug: string) {
+  const rows = await listBookMeHotelMembershipsFromSupabase({ hotelSlug });
+  return rows.length;
+}
+
+export async function upsertBookMeHotelMembershipToSupabase(input: {
+  hotelSlug: string;
+  userEmail: string;
+  role: BookMeHotelRole;
+}) {
+  const rows = await supabaseRest<BookMeHotelMembershipRow[]>("bookme_hotel_memberships", {
+    method: "POST",
+    query: "on_conflict=hotel_slug,user_email",
+    prefer: "resolution=merge-duplicates,return=representation",
+    body: {
+      hotel_slug: input.hotelSlug,
+      user_email: input.userEmail.toLowerCase(),
+      role: input.role,
+    },
+  });
+
+  return rows?.[0] ? membershipFromRow(rows[0]) : null;
 }
