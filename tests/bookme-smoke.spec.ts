@@ -6,11 +6,11 @@ test("guest demo and admin dashboard render", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Send message" })).toBeVisible();
 
   await page.goto("/admin?hotel=sriram-hotel");
-  await expect(page.getByText("Hotel admin workspace")).toBeVisible();
+  await expect(page.getByText("Hotel owner dashboard")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Reservations" })).toBeVisible();
   await expect(page.getByPlaceholder("Search booking, guest, contact")).toBeVisible();
   await expect(page.getByRole("button", { name: "Pay" }).first()).toBeVisible();
-  await expect(page.getByText("Recent AI activity")).toBeVisible();
+  await expect(page.getByText("Recent activity")).toBeVisible();
 });
 
 test("owner onboarding focuses on chat, setup summary, and quote", async ({ page }) => {

@@ -173,12 +173,12 @@ export function AdminReservationsPanel({
   }
 
   return (
-    <section id="reservations" className="liquid-glass overflow-hidden rounded-[1.5rem]">
+    <section id="reservations" className="liquid-glass min-w-0 overflow-hidden rounded-[1.5rem]">
       <div className="flex flex-col justify-between gap-3 border-b border-white/10 px-5 py-4 lg:flex-row lg:items-center">
         <div className="flex items-center gap-3">
           <div>
             <h2 className="text-sm font-medium text-white">Reservations</h2>
-            <p className="text-xs text-white/[0.5]">Search, filter, and manually override guest state</p>
+            <p className="text-xs text-white/[0.5]">Review bookings, payments, and guest status</p>
           </div>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -208,33 +208,43 @@ export function AdminReservationsPanel({
       ) : null}
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[1180px] text-left text-sm">
+        <table className="w-full min-w-[900px] table-fixed text-left text-sm">
+          <colgroup>
+            <col className="w-[12%]" />
+            <col className="w-[16%]" />
+            <col className="w-[14%]" />
+            <col className="w-[14%]" />
+            <col className="w-[12%]" />
+            <col className="w-[14%]" />
+            <col className="w-[8%]" />
+            <col className="w-[10%]" />
+          </colgroup>
           <thead className="border-b border-white/10 text-xs uppercase tracking-[0.16em] text-white/[0.42]">
             <tr>
-              <th className="px-5 py-3 font-medium">Booking</th>
-              <th className="px-5 py-3 font-medium">Guest</th>
-              <th className="px-5 py-3 font-medium">Room</th>
-              <th className="px-5 py-3 font-medium">Dates</th>
-              <th className="px-5 py-3 font-medium">Status</th>
-              <th className="px-5 py-3 font-medium">Payment</th>
-              <th className="px-5 py-3 font-medium">Total</th>
-              <th className="px-5 py-3 font-medium">Override</th>
+              <th className="px-4 py-3 font-medium">Booking</th>
+              <th className="px-4 py-3 font-medium">Guest</th>
+              <th className="px-4 py-3 font-medium">Room</th>
+              <th className="px-4 py-3 font-medium">Dates</th>
+              <th className="px-4 py-3 font-medium">Status</th>
+              <th className="px-4 py-3 font-medium">Payment</th>
+              <th className="px-4 py-3 font-medium">Total</th>
+              <th className="px-4 py-3 font-medium">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/10">
             {filteredRows.map((reservation) => (
               <tr key={reservation.bookingId}>
-                <td className="whitespace-nowrap px-5 py-4 font-medium text-white">{reservation.bookingId}</td>
-                <td className="px-5 py-4">
+                <td className="whitespace-nowrap px-4 py-4 font-medium text-white">{reservation.bookingId}</td>
+                <td className="px-4 py-4">
                   <p className="font-medium text-white">{reservation.guestName}</p>
-                  <p className="text-xs text-white/[0.45]">{reservation.contact}</p>
+                  <p className="truncate text-xs text-white/[0.45]">{reservation.contact}</p>
                 </td>
-                <td className="px-5 py-4 text-white/[0.64]">{reservation.room}</td>
-                <td className="px-5 py-4 text-white/[0.64]">{reservation.dates}</td>
-                <td className="px-5 py-4">
+                <td className="px-4 py-4 text-white/[0.64]">{reservation.room}</td>
+                <td className="px-4 py-4 text-white/[0.64]">{reservation.dates}</td>
+                <td className="px-4 py-4">
                   <StatusPill status={reservation.status} />
                 </td>
-                <td className="px-5 py-4">
+                <td className="px-4 py-4">
                   <div className="flex flex-wrap items-center gap-2">
                     <StatusPill status={reservation.paymentStatus} />
                     {reservation.paymentLinkUrl ? (
@@ -251,8 +261,8 @@ export function AdminReservationsPanel({
                   </div>
                   <p className="mt-1 text-xs text-white/[0.45]">{reservation.paymentMode}</p>
                 </td>
-                <td className="px-5 py-4 text-white">{reservation.total}</td>
-                <td className="px-5 py-4">
+                <td className="px-4 py-4 text-white">{reservation.total}</td>
+                <td className="px-4 py-4">
                   <div className="flex flex-wrap gap-2">
                     <button
                       type="button"

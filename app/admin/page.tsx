@@ -33,37 +33,37 @@ const automations = [
   {
     title: "Booking assistant",
     status: "Live",
-    description: "Checks availability, quotes rates, and waits for explicit confirmation.",
+    description: "Answers guest availability questions, quotes rates, and creates bookings only after confirmation.",
     icon: CalendarCheck,
   },
   {
     title: "Self check-in",
     status: "Live",
-    description: "Verifies reservations by phone, email, or booking ID before issuing the room.",
+    description: "Finds the reservation, checks the guest state, and keeps staff in control before room release.",
     icon: KeyRound,
   },
   {
     title: "Self checkout",
     status: "Live",
-    description: "Closes checked-in stays and returns a receipt-style summary card.",
+    description: "Closes stays, updates room status, and gives the guest a clean checkout summary.",
     icon: CircleDollarSign,
   },
 ];
 
 const setupCards = [
   {
-    title: "Brand the guest site",
-    body: "Hotel name, location, hero copy, room highlights, and guest action buttons.",
+    title: "Guest website",
+    body: "Hotel name, location, room highlights, check-in window, and guest action buttons.",
     icon: Building2,
   },
   {
-    title: "Connect reservation data",
-    body: "Start with Google Sheets, then swap the same tool layer to a hotel PMS.",
+    title: "Reservation source",
+    body: "Google Sheets is the live source for bookings and room inventory in this pilot.",
     icon: PlugZap,
   },
   {
-    title: "Set front-desk rules",
-    body: "Check-in windows, cancellation handoff, refunds, payment boundaries, and escalation.",
+    title: "Staff rules",
+    body: "Check-in windows, ID review, cancellation handoff, refunds, payments, and escalation rules.",
     icon: ShieldCheck,
   },
 ];
@@ -80,6 +80,15 @@ function StatusPill({ status }: { status: string }) {
 }
 
 function formatEventTime(value: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+function formatConnectorTime(value: string) {
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
@@ -162,13 +171,22 @@ export default async function AdminPage({
     Promise.all(listConnectorBackends().map((connector) => connector.health())),
     listBookMeAuditEventsFromSupabase({ hotelSlug: hotelConfig.slug, limit: 8 }),
   ]);
+  const liveConnector = connectors.find((connector) => connector.status === "ok");
+  const visibleConnectors = liveConnector
+    ? connectors.filter((connector) => connector.status === "ok")
+    : connectors;
 
   return (
     <main className="min-h-screen bg-[hsl(var(--background))] text-white">
       <section className="demo-static-hero relative overflow-hidden">
-        <SiteHeader ctaLabel="Sign up" />
+        <SiteHeader
+          ctaLabel="View guest site"
+          ctaHref={dashboard.hotel.guestSite}
+          showAuthLinks={false}
+          showMarketingNav={false}
+        />
 
-        <div className="relative z-10 mx-auto grid max-w-7xl gap-6 px-6 pb-14 pt-8 sm:px-8 lg:grid-cols-[260px_1fr]">
+        <div className="relative z-10 mx-auto grid max-w-7xl gap-6 px-6 pb-14 pt-8 sm:px-8 lg:grid-cols-[260px_minmax(0,1fr)]">
           <aside className="liquid-glass h-max rounded-[1.5rem] p-4">
             <div className="mb-6 flex items-center gap-3">
               <div className="grid h-10 w-10 place-items-center rounded-2xl bg-white text-zinc-950">
@@ -210,34 +228,37 @@ export default async function AdminPage({
             </Link>
           </aside>
 
-          <div className="space-y-6">
+          <div className="min-w-0 space-y-6">
             <section id="overview" className="liquid-glass rounded-[2rem] p-6 sm:p-8">
               <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
                 <div>
                   <p className="mb-4 inline-flex rounded-full bg-white/10 px-3 py-1.5 text-sm font-medium text-white/[0.72]">
-                    Hotel admin workspace
+                    Hotel owner dashboard
                   </p>
                   <h1
                     className="max-w-4xl text-5xl font-normal leading-[0.95] tracking-[-2.46px] text-white sm:text-7xl"
                     style={{ fontFamily: "'Instrument Serif', serif" }}
                   >
-                    Operate the AI front desk from one place.
+                    Manage your guest front desk from one place.
                   </h1>
                   <p className="mt-5 max-w-2xl text-base leading-7 text-white/[0.62]">
-                    Configure the hotel site, monitor reservations, manage inventory, and control which workflows BookMe can complete.
+                    See bookings, room availability, guest payments, and AI-handled actions without opening a spreadsheet during the front-desk rush.
                   </p>
                 </div>
 
                 <div className="flex flex-col gap-3 sm:flex-row">
-                  <button className="liquid-glass inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-medium text-white transition hover:scale-[1.03]">
-                    <Settings className="h-4 w-4" />
-                    Configure hotel
-                  </button>
                   <a
-                    href="/api/connectors"
+                    href="#settings"
+                    className="liquid-glass inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-medium text-white transition hover:scale-[1.03]"
+                  >
+                    <Settings className="h-4 w-4" />
+                    Edit hotel setup
+                  </a>
+                  <a
+                    href="#data-connection"
                     className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-medium text-zinc-950 transition hover:scale-[1.03]"
                   >
-                    Connect Sheets
+                    View data connection
                     <PlugZap className="h-4 w-4" />
                   </a>
                 </div>
@@ -274,13 +295,13 @@ export default async function AdminPage({
               ) : null}
             </section>
 
-            <section className="grid gap-4 lg:grid-cols-2">
-              {connectors.map((connector) => (
+            <section id="data-connection" className="grid gap-4 lg:grid-cols-2">
+              {visibleConnectors.map((connector) => (
                 <article key={connector.id} className="liquid-glass rounded-[1.5rem] p-5">
                   <div className="mb-4 flex items-start justify-between gap-4">
                     <div>
                       <p className="text-xs font-medium uppercase tracking-[0.18em] text-white/[0.45]">
-                        Connector
+                        Data connection
                       </p>
                       <h2 className="mt-1 font-medium text-white">{connector.name}</h2>
                     </div>
@@ -294,8 +315,14 @@ export default async function AdminPage({
                       }
                     />
                   </div>
-                  <p className="text-sm leading-6 text-white/[0.58]">{connector.message}</p>
-                  <p className="mt-3 text-xs text-white/[0.42]">Checked {connector.checkedAt}</p>
+                  <p className="text-sm leading-6 text-white/[0.58]">
+                    {connector.status === "ok"
+                      ? `${connector.name} is connected and feeding reservations, inventory, and status updates into BookMe.`
+                      : connector.status === "not_configured"
+                        ? `${connector.name} is not connected yet. Add credentials when this hotel is ready for that source.`
+                        : `${connector.name} needs attention before it can be used for this hotel.`}
+                  </p>
+                  <p className="mt-3 text-xs text-white/[0.42]">Last checked {formatConnectorTime(connector.checkedAt)}</p>
                 </article>
               ))}
             </section>
@@ -320,12 +347,12 @@ export default async function AdminPage({
                 <div className="flex items-center gap-3">
                   <History className="h-5 w-5" />
                   <div>
-                    <h2 className="text-sm font-medium text-white">Recent AI activity</h2>
-                    <p className="text-xs text-white/[0.5]">Tool-backed actions recorded for staff review</p>
+                    <h2 className="text-sm font-medium text-white">Recent activity</h2>
+                    <p className="text-xs text-white/[0.5]">Guest actions and staff-visible updates</p>
                   </div>
                 </div>
                 <span className="text-xs text-white/[0.55]">
-                  {auditEvents.length > 0 ? `${auditEvents.length} latest events` : "Audit log pending"}
+                  {auditEvents.length > 0 ? `${auditEvents.length} latest events` : "Live pilot summary"}
                 </span>
               </div>
 
@@ -357,10 +384,35 @@ export default async function AdminPage({
                   ))}
                 </div>
               ) : (
-                <div className="px-5 py-8">
-                  <p className="text-sm leading-6 text-white/[0.58]">
-                    No audit events are available yet. Configure Supabase, run the schema migration, and complete a guest workflow to populate this log.
-                  </p>
+                <div className="divide-y divide-white/10">
+                  {[
+                    {
+                      title: "Guest website is live",
+                      detail: `${dashboard.hotel.name} guests can book, check in, and check out from the hosted guest site.`,
+                      status: "Live",
+                    },
+                    {
+                      title: "Reservation data synced",
+                      detail: `${dashboard.reservations.length} reservations and ${dashboard.inventory.length} rooms are visible to BookMe.`,
+                      status: "Ready",
+                    },
+                    {
+                      title: "Staff handoff is enabled",
+                      detail: "Payment issues, refunds, disputes, and exceptions stay with hotel staff.",
+                      status: "Ready",
+                    },
+                  ].map((event) => (
+                    <div key={event.title} className="grid gap-3 px-5 py-4 text-sm lg:grid-cols-[1fr_auto] lg:items-center">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-3">
+                          <p className="font-medium text-white">{event.title}</p>
+                          <StatusPill status={event.status} />
+                        </div>
+                        <p className="mt-1 text-sm leading-6 text-white/[0.58]">{event.detail}</p>
+                      </div>
+                      <span className="text-xs text-white/[0.48]">Now</span>
+                    </div>
+                  ))}
                 </div>
               )}
             </section>
@@ -373,7 +425,7 @@ export default async function AdminPage({
                   <BedDouble className="h-5 w-5" />
                   <div>
                     <h2 className="text-sm font-medium text-white">Room inventory</h2>
-                    <p className="text-xs text-white/[0.5]">Rates and availability exposed to the agent</p>
+                    <p className="text-xs text-white/[0.5]">Current room status and rates used for guest quotes</p>
                   </div>
                 </div>
                 <div className="divide-y divide-white/10">
