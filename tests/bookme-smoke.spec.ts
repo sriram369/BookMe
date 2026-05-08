@@ -13,6 +13,14 @@ test("guest demo and admin dashboard render", async ({ page }) => {
   await expect(page.getByText("Recent AI activity")).toBeVisible();
 });
 
+test("owner onboarding focuses on chat, setup summary, and quote", async ({ page }) => {
+  await page.goto("/onboarding");
+  await expect(page.getByText("Set up the guest website, then quote the pilot.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Setup summary" })).toBeVisible();
+  await expect(page.getByText("Owner quote")).toBeVisible();
+  await expect(page.getByPlaceholder("What is your hotel name?")).toBeVisible();
+});
+
 test("front desk check-in workflow returns a grounded tool result", async ({ request }) => {
   await request.post("/api/connectors/seed", {
     data: { reset: true },

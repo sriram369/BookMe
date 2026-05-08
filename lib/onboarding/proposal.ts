@@ -66,7 +66,7 @@ function fallbackProposal(input: OwnerProposalInput): OwnerProposal {
     rollout: [
       "Week 1: map reservation sheet, room inventory, check-in rules, and escalation numbers.",
       "Week 2: launch guest web demo for booking, check-in, and checkout.",
-      "Week 3: add WhatsApp handoff and tune prompts from live guest messages.",
+      "Week 3: review live demo transcripts, tune handoff rules, and prepare production launch steps.",
     ],
     risks: [
       "Payments and refunds should stay out of AI automation until the hotel approves a payment provider.",
@@ -74,6 +74,16 @@ function fallbackProposal(input: OwnerProposalInput): OwnerProposal {
       "PMS or OTA integrations need a separate connector review before production.",
     ],
   };
+}
+
+function isPlan(value: unknown): value is OwnerProposal["recommendedPlan"] {
+  return value === "Pilot" || value === "Growth" || value === "Managed";
+}
+
+function cleanTextArray(value: unknown, fallback: string[]) {
+  if (!Array.isArray(value)) return fallback;
+  const cleaned = value.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+  return cleaned.length ? cleaned.slice(0, 4) : fallback;
 }
 
 export async function generateOwnerProposal(input: OwnerProposalInput): Promise<OwnerProposal> {
@@ -96,7 +106,7 @@ export async function generateOwnerProposal(input: OwnerProposalInput): Promise<
           {
             role: "system",
             content:
-              "You price and scope BookMe for mid-market hotels in India. Return only compact JSON with recommendedPlan, monthlyPrice, setupFee, summary, rollout array, and risks array. Be practical and do not claim integrations are live unless the source system is Google Sheets.",
+              "You price and scope BookMe for mid-market hotels in India. Return only compact JSON with recommendedPlan, monthlyPrice, setupFee, summary, rollout array, and risks array. Focus on the guest web portal, admin dashboard, and reservation connector. Do not add WhatsApp, Telegram, PMS, or OTA automation unless the input explicitly asks for it. Be practical and do not claim integrations are live unless the source system is Google Sheets.",
           },
           {
             role: "user",
@@ -126,17 +136,16 @@ export async function generateOwnerProposal(input: OwnerProposalInput): Promise<
 
   try {
     const parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}") as Partial<OwnerProposal>;
-    if (!parsed.recommendedPlan || !parsed.monthlyPrice || !parsed.summary) {
-      return fallbackProposal(input);
-    }
+    const fallback = fallbackProposal(input);
+    if (!isPlan(parsed.recommendedPlan) || !parsed.monthlyPrice || !parsed.summary) return fallback;
 
     return {
       recommendedPlan: parsed.recommendedPlan,
-      monthlyPrice: parsed.monthlyPrice,
-      setupFee: parsed.setupFee ?? "Custom",
+      monthlyPrice: typeof parsed.monthlyPrice === "string" ? parsed.monthlyPrice : fallback.monthlyPrice,
+      setupFee: typeof parsed.setupFee === "string" ? parsed.setupFee : fallback.setupFee,
       summary: parsed.summary,
-      rollout: parsed.rollout?.slice(0, 4) ?? fallbackProposal(input).rollout,
-      risks: parsed.risks?.slice(0, 4) ?? fallbackProposal(input).risks,
+      rollout: cleanTextArray(parsed.rollout, fallback.rollout),
+      risks: cleanTextArray(parsed.risks, fallback.risks),
     };
   } catch {
     return fallbackProposal(input);
