@@ -220,6 +220,12 @@ The admin dashboard is available at:
 http://localhost:3000/admin?hotel=sriram-hotel
 ```
 
+The hosted Vercel deployment is available at:
+
+```text
+https://bookme-vercel.vercel.app
+```
+
 The class demo does not require paid provider accounts. The website is the product demo. Razorpay is an optional production payment adapter; when credentials are missing, the payment endpoint fails closed and explains the missing setup instead of faking success. See:
 
 ```text

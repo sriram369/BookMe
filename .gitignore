@@ -14,3 +14,4 @@ tsconfig.tsbuildinfo
 data/*.json
 test-results/
 playwright-report/
+.vercel
