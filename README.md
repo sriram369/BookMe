@@ -1,6 +1,6 @@
 # BookMe
 
-BookMe is a GenAI front-desk assistant for independent hotels. It helps a guest complete three common front-desk workflows in natural language:
+BookMe is a web-based GenAI front-desk assistant for independent hotels. A hotel can share one guest portal link by QR code, SMS, email, or website button so guests can complete three common front-desk workflows in natural language:
 
 - book a room
 - check in to an existing reservation
@@ -20,7 +20,7 @@ The project is intentionally narrow. BookMe is not a full hotel management syste
 
 ## Solution and Design
 
-BookMe is a Next.js app with a guest-facing chat interface, a hotel admin dashboard, and tool-backed API routes.
+BookMe is a Next.js app with a guest-facing web portal, a hotel admin dashboard, and tool-backed API routes.
 
 The guest can type messages such as:
 
@@ -55,10 +55,10 @@ The AI front desk then decides whether to ask a follow-up question or call one o
 ### Architecture
 
 ```text
-Guest browser
+Guest web portal
   |
   v
-Next.js guest chat UI
+Next.js guest web UI
   |
   v
 /api/agent
@@ -91,8 +91,7 @@ The repository includes:
 - reservation and inventory tool layer
 - optional Google Sheets connector
 - optional Supabase persistence for hotel configuration
-- optional Razorpay payment-link and webhook shell
-- optional Telegram guest messaging channel
+- optional Razorpay payment-link and webhook shell for production payment pilots
 - safe configuration and connector health endpoints
 
 Important routes:
@@ -110,7 +109,6 @@ Important routes:
 | `/api/connectors` | Connector health and initialization |
 | `/api/payments/razorpay-link` | Protected Razorpay payment-link creation |
 | `/api/payments/razorpay-webhook` | Verified Razorpay payment webhook |
-| `/api/channels/telegram` | Telegram guest message webhook and channel health |
 
 ## Baseline Comparison
 
@@ -163,7 +161,7 @@ Each test case can be scored with this rubric:
 
 ### Observed Results
 
-In local verification, the tool-backed BookMe workflow handled the main happy paths:
+In local verification, the tool-backed BookMe web workflow handled the main happy paths:
 
 - availability check
 - booking creation
@@ -222,13 +220,12 @@ The admin dashboard is available at:
 http://localhost:3000/admin?hotel=sriram-hotel
 ```
 
-The class demo does not require paid provider accounts. Razorpay and Telegram are optional production adapters; when credentials are missing, their endpoints fail closed and explain the missing setup instead of faking success. See:
+The class demo does not require paid provider accounts. The website is the product demo. Razorpay is an optional production payment adapter; when credentials are missing, the payment endpoint fails closed and explains the missing setup instead of faking success. See:
 
 ```text
 PROVIDER_DEMO_NOTES.md
 SECURITY_UPGRADE_PLAN.md
 PAYMENTS_PHASE_2.md
-TELEGRAM_CHANNEL_PHASE_2.md
 ```
 
 ## Setup and Usage
@@ -241,7 +238,6 @@ TELEGRAM_CHANNEL_PHASE_2.md
 - Optional: Google Sheets service account for live Sheets-backed reservations
 - Optional: Supabase project for persistent hotel configuration
 - Optional: Razorpay test account for hosted payment links
-- Optional: Telegram bot token for guest messaging demo
 
 ### Install
 
@@ -320,14 +316,6 @@ For Razorpay:
 RAZORPAY_KEY_ID=
 RAZORPAY_KEY_SECRET=
 RAZORPAY_WEBHOOK_SECRET=
-```
-
-For Telegram:
-
-```bash
-TELEGRAM_BOT_TOKEN=
-TELEGRAM_WEBHOOK_SECRET=
-TELEGRAM_DEFAULT_HOTEL_SLUG=sriram-hotel
 ```
 
 Do not commit API keys, service account JSON files, private data, or guest PII.

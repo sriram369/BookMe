@@ -1,6 +1,6 @@
 # BookMe Provider Demo Notes
 
-BookMe can be presented without spending money. The live class demo should use the local web app and deterministic fail-closed provider paths.
+BookMe can be presented without spending money. The live class demo should use the local guest website and admin dashboard. Provider integrations are optional production proof points, not the core demo.
 
 ## Free Class Demo Path
 
@@ -55,31 +55,6 @@ RAZORPAY_KEY_SECRET=
 RAZORPAY_WEBHOOK_SECRET=
 ```
 
-## Telegram Demo
-
-Telegram is optional. It is useful for a product story because it shows BookMe can run in a guest messaging channel, not only on the website.
-
-Expected free-demo behavior:
-
-- `/api/channels/telegram` reports missing credentials.
-- Smoke tests verify the endpoint fails closed when credentials are absent.
-
-Expected production behavior:
-
-- Guest messages the Telegram bot.
-- Telegram calls `/api/channels/telegram`.
-- BookMe verifies the webhook secret.
-- BookMe runs the same front-desk agent workflow.
-- The bot replies with the result.
-
-Required production variables:
-
-```bash
-TELEGRAM_BOT_TOKEN=
-TELEGRAM_WEBHOOK_SECRET=
-TELEGRAM_DEFAULT_HOTEL_SLUG=sriram-hotel
-```
-
 ## Presentation Line
 
-“The demo runs fully locally for free. Paid providers are optional production adapters. When credentials are absent, BookMe fails closed and explains what setup is missing instead of pretending the integration worked.”
+“The main product is a guest web portal that a hotel can share by QR code, SMS, email, or website button. The local demo runs for free. Payment providers are optional production adapters, and when credentials are absent, BookMe fails closed instead of pretending the integration worked.”

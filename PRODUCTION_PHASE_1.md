@@ -4,13 +4,13 @@ Phase 1 turns BookMe from a strong demo MVP into a production-grade pilot for on
 
 ## Core Promise
 
-BookMe v1 is an AI front desk that lets hotel guests complete routine booking, check-in, and checkout workflows while every data-changing action is grounded in tools, logged, and available for staff review.
+BookMe v1 is a guest web portal for hotel booking, check-in, and checkout workflows while every data-changing action is grounded in tools, logged, and available for staff review.
 
 ## Current Status
 
 | Area | Status | Notes |
 |---|---|---|
-| Guest booking/check-in/checkout | In progress | Demo and eval paths work. Critical flows have deterministic fallbacks. |
+| Guest website booking/check-in/checkout | In progress | Demo and eval paths work. Critical flows have deterministic fallbacks. |
 | README and class evaluation | Done | README, `eval/`, `npm run eval`, typecheck, and build are in place. |
 | Data source | Started | Supabase connector now supports reservations/inventory as primary when healthy; Google Sheets/local store remain fallbacks. |
 | Authentication | Started | NextAuth OAuth shell exists, hotel membership roles are modeled, and admin/API access is membership-gated when OAuth is enabled. |
@@ -84,7 +84,7 @@ BookMe v1 is an AI front desk that lets hotel guests complete routine booking, c
 | P1 | Add Playwright smoke tests | Done |
 | P2 | Add Razorpay payment link design, no LLM payment control | Done |
 | P2 | Add Razorpay webhook verification and reservation payment update shell | Done |
-| P2 | Add Telegram guest channel design/API adapter | Done |
+| Optional | Telegram channel adapter experiment | Done, not part of core demo |
 | P2 | Add admin payment action UI and setup-needed state | Done |
 | P2 | Add real provider demo notes for no-cost class presentation | Done |
 | P2 | Plan Next.js major upgrade for npm audit advisories | Done |
