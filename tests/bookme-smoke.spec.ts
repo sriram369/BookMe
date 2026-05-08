@@ -21,6 +21,14 @@ test("owner onboarding focuses on chat, setup summary, and quote", async ({ page
   await expect(page.getByPlaceholder("What is your hotel name?")).toBeVisible();
 });
 
+test("pilot checkout payment wall renders in demo mode", async ({ page }) => {
+  await page.goto("/checkout");
+  await expect(page.getByText("BookMe pilot checkout")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start with the Pilot plan." })).toBeVisible();
+  await expect(page.getByText("Demo mode")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Continue to admin demo" })).toBeVisible();
+});
+
 test("front desk check-in workflow returns a grounded tool result", async ({ request }) => {
   await request.post("/api/connectors/seed", {
     data: { reset: true },

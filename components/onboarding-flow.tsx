@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowRight, Check, Hotel, MessageSquareText, Send } from "lucide-react";
+import { ArrowRight, Hotel, MessageSquareText, Send } from "lucide-react";
+import Link from "next/link";
 import { hotelSystems } from "@/lib/onboarding-data";
-import type { HotelConfig } from "@/lib/hotel/config-store";
 import type { OwnerProposal } from "@/lib/onboarding/proposal";
 
 const defaultRooms = [
@@ -56,7 +56,6 @@ export function OnboardingFlow() {
   const [checkinWindow, setCheckinWindow] = useState("");
   const [escalationContact, setEscalationContact] = useState("");
   const [proposal, setProposal] = useState<OwnerProposal | null>(null);
-  const [savedHotel, setSavedHotel] = useState<HotelConfig | null>(null);
   const [isWorking, setIsWorking] = useState(false);
   const [formError, setFormError] = useState("");
   const [chatInput, setChatInput] = useState("");
@@ -153,41 +152,6 @@ export function OnboardingFlow() {
       setProposal(data.proposal ?? null);
     } catch {
       setFormError("Could not reach the proposal service. Try again.");
-    } finally {
-      setIsWorking(false);
-    }
-  }
-
-  async function saveSetup() {
-    setFormError("");
-    setIsWorking(true);
-    try {
-      const activeProposal = proposal;
-      const response = await fetch("/api/hotels", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          hotelName,
-          city,
-          checkinWindow,
-          escalationContact,
-          gstin: "Optional for pilot",
-          sourceSystem,
-          roomTypes: rooms,
-          totalRooms,
-          proposal: activeProposal,
-        }),
-      });
-
-      const data = (await response.json()) as { hotel?: HotelConfig; errors?: string[]; error?: string };
-      if (!response.ok) {
-        setFormError(data.errors?.join(" ") || data.error || "Could not save hotel setup.");
-        return;
-      }
-
-      setSavedHotel(data.hotel ?? null);
-    } catch {
-      setFormError("Could not save the hotel setup. Try again.");
     } finally {
       setIsWorking(false);
     }
@@ -347,15 +311,15 @@ export function OnboardingFlow() {
                 {isWorking ? "Working..." : "Generate quote"}
                 <ArrowRight className="h-4 w-4" />
               </button>
-              <button
-                type="button"
-                onClick={saveSetup}
-                disabled={isWorking || !proposal}
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-white/15 px-5 py-3 text-sm font-medium text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Save hotel setup
-                <Check className="h-4 w-4" />
-              </button>
+              {proposal ? (
+                <Link
+                  href="/signup?callbackUrl=/checkout"
+                  className="inline-flex items-center justify-center gap-2 rounded-full border border-emerald-200/25 bg-emerald-200/[0.12] px-5 py-3 text-sm font-medium text-emerald-50 transition hover:bg-emerald-200/[0.18]"
+                >
+                  Continue to sign up
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              ) : null}
             </div>
 
             {formError ? (
@@ -364,19 +328,6 @@ export function OnboardingFlow() {
               </div>
             ) : null}
 
-            {savedHotel ? (
-              <div className="mt-4 rounded-2xl border border-emerald-200/20 bg-emerald-200/[0.08] p-4">
-                <p className="text-sm font-medium text-emerald-50">Saved {savedHotel.hotelName}</p>
-                <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-                  <a href={`/admin?hotel=${savedHotel.slug}`} className="rounded-full bg-white px-4 py-2.5 text-center text-sm font-medium text-zinc-950">
-                    Open admin
-                  </a>
-                  <a href={`/demo?hotel=${savedHotel.slug}`} className="rounded-full border border-white/15 px-4 py-2.5 text-center text-sm font-medium text-white">
-                    Open guest site
-                  </a>
-                </div>
-              </div>
-            ) : null}
           </section>
         </aside>
       </section>
