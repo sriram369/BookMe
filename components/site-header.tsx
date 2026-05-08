@@ -38,9 +38,6 @@ export function SiteHeader({
           <Link href="/demo" className="transition-colors hover:text-white">
             Demo
           </Link>
-          <Link href="/solution" className="transition-colors hover:text-white">
-            Solution
-          </Link>
           <Link href="/onboarding" className="transition-colors hover:text-white">
             Onboarding
           </Link>
