@@ -4,6 +4,8 @@
 
 **Presentation artifact:** The 5-slide class presentation deck and speaker notes are in `deliverables/BookMe_Final_Presentation.pptx` and `deliverables/BookMe_Speaker_Notes.md`.
 
+**Demo video:** A short walkthrough of the hosted BookMe guest flow and owner dashboard is available on YouTube: https://www.youtube.com/watch?v=UFMcb-QbZ9o
+
 BookMe is a web-based GenAI front-desk assistant for independent hotels. A hotel can share one guest portal link by QR code, SMS, email, or website button so guests can complete three common front-desk workflows in natural language:
 
 - book a room
@@ -178,6 +180,12 @@ In local verification, the tool-backed BookMe web workflow handled the main happ
 The comparison showed that BookMe is stronger than a prompt-only baseline for task completion and data accuracy because it can read and update reservation data. The remaining weaknesses are integration-heavy: real OAuth setup, production secrets, live Google Sheets credentials, payment provider integration, and broader regression testing.
 
 ## Artifact Snapshot
+
+Short demo video:
+
+```text
+https://www.youtube.com/watch?v=UFMcb-QbZ9o
+```
 
 Example guest interaction:
 
